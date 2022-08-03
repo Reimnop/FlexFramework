@@ -1,2 +1,2 @@
 # FlexFramework
- A flexible and existensible game framework
+ A flexible and extensible game framework
