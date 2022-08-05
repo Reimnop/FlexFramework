@@ -79,15 +79,14 @@ public class DefaultRenderer : Renderer
         RenderLayer(opaqueLayer);
         
         GL.DepthMask(false);
+        GL.Enable(EnableCap.Blend);
+        GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         RenderLayer(transparentLayer);
         
         GL.DepthMask(true);
         
         GL.Disable(EnableCap.DepthTest);
-        GL.Enable(EnableCap.Blend);
-        GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         RenderLayer(guiLayer);
-        
         GL.Disable(EnableCap.Blend);
     }
 

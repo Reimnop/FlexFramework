@@ -2,9 +2,11 @@
 using System.Globalization;
 using FlexFramework.Audio;
 using FlexFramework.Core;
+using FlexFramework.Core.EntitySystem;
 using FlexFramework.Core.EntitySystem.Default;
 using FlexFramework.Core.Util;
 using FlexFramework.Rendering;
+using FlexFramework.Rendering.Data;
 using OpenTK.Mathematics;
 using Textwriter;
 using Renderer = FlexFramework.Rendering.Renderer;
@@ -20,6 +22,7 @@ public class TestScene : Scene
     private TextEntity fpsEntity;
 
     private int opaqueLayerId;
+    private int transparentLayerId;
     private int guiLayerId;
 
     private Font robotoRegular;
@@ -30,13 +33,20 @@ public class TestScene : Scene
     private FilterButterworth[] filtersLp;
     private FilterButterworth[] filtersHp;
 
+    private AnimatedEntity animatedEntity;
+    private TexturedEntity texturedEntity;
+    private Animation animation;
+
     private double scale = 0.0f;
+    
+    private Vector2d mouseVector = Vector2d.Zero;
 
     private int lastSample = 0;
     
     public override void Init()
     {
         opaqueLayerId = Engine.Renderer.GetLayerId(DefaultRenderer.OpaqueLayerName);
+        transparentLayerId = Engine.Renderer.GetLayerId(DefaultRenderer.TransparentLayerName);
         guiLayerId = Engine.Renderer.GetLayerId(DefaultRenderer.GuiLayerName);
 
         source = new AudioSource();
@@ -44,6 +54,7 @@ public class TestScene : Scene
         source.Play();
         
         camera = new OrthographicCamera();
+        camera.Size = 5.0;
         camera.DepthNear = -10.0;
         camera.DepthFar = 10.0;
 
@@ -73,8 +84,22 @@ public class TestScene : Scene
             
             meshEntities[i] = new MeshEntity();
             meshEntities[i].Mesh = Engine.PersistentResources.QuadMesh;
-            meshEntities[i].Position = new Vector3d(MathHelper.Lerp(-8.0, 8.0, i / (double) (barCount - 1)), 0.0, 0.0);
+            meshEntities[i].Position = new Vector3d(MathHelper.Lerp(-4.0, 4.0, i / (double) (barCount - 1)), 0.0, 0.0);
         }
+
+        animation = new Animation(60.0);
+        for (int i = 1; i < 20; i++)
+        {
+            animation.LoadFrame($"enchart/Enchart{i.ToString().PadLeft(4, '0')}.png");
+        }
+        
+        animatedEntity = new AnimatedEntity(Engine);
+        animatedEntity.Animation = animation;
+
+        texturedEntity = new TexturedEntity(Engine);
+        texturedEntity.Position = -Vector3d.UnitY * 0.2;
+        texturedEntity.Scale = Vector3d.One * 0.125;
+        texturedEntity.Texture = Texture2D.FromFile("face", "enchart/Face1.png");
     }
 
     public override void Update(UpdateArgs args)
@@ -84,6 +109,11 @@ public class TestScene : Scene
             .AddText(new StyledText(Math.Floor(1.0 / args.DeltaTime).ToString(CultureInfo.InvariantCulture), robotoRegular)
                 .WithColor(Color.White));
         fpsEntity.SetText(textBuilder.Build());
+
+        Vector2 mousePos = Engine.MouseState.Position;
+        mousePos = (Vector2) Engine.ClientSize * 0.5f - mousePos;
+        
+        mouseVector = mousePos / ((Vector2) Engine.ClientSize * 0.5f);
 
         int pos = source.SamplePosition;
         for (int i = lastSample; i < pos; i++)
@@ -95,20 +125,24 @@ public class TestScene : Scene
             }
         }
         lastSample = pos;
-
         for (int i = 0; i < meshEntities.Length; i++)
         {
             float filterValue = MathF.Abs(filtersHp[i].Value);
 
-            meshEntities[i].Scale = new Vector3d(0.15, MathHelper.Lerp(meshEntities[i].Scale.Y,  filterValue * 64.0 + 0.1, args.DeltaTime * 8.0), 1.0);
+            meshEntities[i].Scale = new Vector3d(0.075, MathHelper.Lerp(meshEntities[i].Scale.Y,  filterValue * 32.0 + 0.1, args.DeltaTime * 8.0), 1.0);
         }
+        scale = MathHelper.Lerp(scale, Math.Abs(filtersHp[11].Value * 2.0), args.DeltaTime * 4.0);
 
-        scale = MathHelper.Lerp(scale, Math.Abs(filtersHp[4].Value * 2.0), args.DeltaTime * 4.0);
+        texturedEntity.Update(args);
+        animatedEntity.Update(args);
     }
 
     public override void Render(Renderer renderer)
     {
         CameraData cameraData = camera.GetCameraData(Engine.ClientSize);
+        
+        transform.Push();
+        transform.Translate(mouseVector.X * 0.05, mouseVector.Y * 0.05, 0.0);
         
         transform.Push();
         transform.Translate(-Engine.ClientSize.X / 2.0, Engine.ClientSize.Y / 2.0, 0.0);
@@ -118,11 +152,23 @@ public class TestScene : Scene
 
         transform.Push();
         transform.Scale(scale + 1.0, scale + 1.0, 0.0);
-        
         for (int i = 0; i < meshEntities.Length; i++)
         {
             meshEntities[i].Render(renderer, opaqueLayerId, transform, cameraData);
         }
+        transform.Pop();
+        
+        transform.Push();
+        transform.Scale(1.0 + scale * 0.5, 1.0 - scale * 0.5, 1.0);
+        transform.Translate(1.5, -1.5 + scale, 0.2);
+        animatedEntity.Render(renderer, transparentLayerId, transform, cameraData);
+        
+        transform.Push();
+        transform.Translate(-mouseVector.X * 0.05, mouseVector.Y * 0.05, 0.0);
+        texturedEntity.Render(renderer, transparentLayerId, transform, cameraData);
+        transform.Pop();
+        transform.Pop();
+        
         transform.Pop();
     }
 

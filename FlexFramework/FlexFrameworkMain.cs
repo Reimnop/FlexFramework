@@ -100,7 +100,8 @@ public class FlexFrameworkMain : NativeWindow
 
     public void Update()
     {
-        GLFW.PollEvents();
+        ProcessInputEvents();
+        ProcessWindowEvents(false);
 
         double currentTime = GLFW.GetTime();
         double deltaTime = currentTime - time;
