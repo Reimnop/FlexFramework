@@ -12,12 +12,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="potassium.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="nya.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
       <None Update="HymnRisenRemix.wav">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

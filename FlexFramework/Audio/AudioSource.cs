@@ -80,6 +80,17 @@ public class AudioSource : IDisposable
         }
     }
 
+    public double PlayPosition => SamplePosition / (double) Clip.SampleRate;
+
+    public int SamplePosition
+    {
+        get
+        {
+            AL.GetSource(Handle, ALGetSourcei.SampleOffset, out int bPosition);
+            return bPosition;
+        }
+    }
+
     public AudioSource()
     {
         Handle = AL.GenSource();
@@ -103,12 +114,6 @@ public class AudioSource : IDisposable
         AL.SourceStop(Handle);
     }
 
-    public double GetPlayPosition()
-    {
-        AL.GetSource(Handle, ALGetSourcei.SampleOffset, out int bPosition);
-        return bPosition / (double) Clip.SampleRate;
-    }
-    
     public void Dispose()
     {
         AL.SourceStop(Handle);

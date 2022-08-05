@@ -5,15 +5,39 @@ namespace FlexFramework.Audio;
 public class AudioClip : IDisposable
 {
     public int Handle { get; }
-    public int SizeInBytes { get; }
+    public float[,] Samples { get; }
     public int SampleRate { get; }
+    public int SizeInBytes { get; }
 
     private AudioClip(ALFormat format, byte[] data, int sampleRate, int sizeInBytes = -1)
     {
-        Handle = AL.GenBuffer();
         SizeInBytes = data.Length;
         SampleRate = sampleRate;
-        AL.BufferData(Handle, format, ref data[0], sizeInBytes < 0 ? data.Length : sizeInBytes, sampleRate);
+
+        int size = sizeInBytes < 0 ? data.Length : sizeInBytes;
+        
+        Handle = AL.GenBuffer();
+        AL.BufferData(Handle, format, ref data[0], size, sampleRate);
+        
+        AL.GetBuffer(Handle, ALGetBufferi.Channels, out int channels);
+        AL.GetBuffer(Handle, ALGetBufferi.Bits, out int bits);
+
+        int samplesCount = size / (bits / 8) / channels;
+
+        Samples = new float[channels, samplesCount];
+        for (int i = 0; i < channels; i++)
+        {
+            for (int j = 0; j < samplesCount; j++)
+            {
+                int index = j * (bits / 8) * channels + i;
+                float value = bits == 8
+                    ? data[index] / (float) (1 << 8)
+                    : (bits == 16 ? BitConverter.ToUInt16(data, index) / (float) (1 << 16) 
+                        : throw new NotSupportedException());
+
+                Samples[i, j] = value;
+            }
+        }
     }
 
     public static AudioClip FromWave(string path)
@@ -47,7 +71,7 @@ public class AudioClip : IDisposable
         string formatSignature = new string(reader.ReadChars(4));
         if (formatSignature != "fmt ")
         {
-            throw new NotSupportedException("Specified wave file is not supported.");
+            throw new NotSupportedException("Specified wave file is not supported");
         }
 
         int formatChunkSize = reader.ReadInt32();
@@ -75,11 +99,13 @@ public class AudioClip : IDisposable
 
     private static ALFormat GetSoundFormat(int channels, int bits)
     {
-        return channels switch
+        return (channels, bits) switch
         {
-            1 => bits == 8 ? ALFormat.Mono8 : ALFormat.Mono16,
-            2 => bits == 8 ? ALFormat.Stereo8 : ALFormat.Stereo16,
-            _ => throw new NotSupportedException("The specified sound format is not supported.")
+            (1, 8) => ALFormat.Mono8,
+            (1, 16) => ALFormat.Mono16,
+            (2, 8) => ALFormat.Stereo8,
+            (2, 16) => ALFormat.Stereo16,
+            _ => throw new NotSupportedException("The specified sound format is not supported")
         };
     }
 

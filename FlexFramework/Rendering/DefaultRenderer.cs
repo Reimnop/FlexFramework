@@ -32,7 +32,7 @@ public class DefaultRenderer : Renderer
         unlitShader = LoadProgram("unlit", "Assets/Shaders/unlit");
         textShader = LoadProgram("text", "Assets/Shaders/text");
         
-        GL.ClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     }
 
     private ShaderProgram LoadProgram(string name, string path)
@@ -68,7 +68,7 @@ public class DefaultRenderer : Renderer
     public override void Render()
     {
         GL.Viewport(0, 0, Engine.ClientSize.X, Engine.ClientSize.Y);
-        GL.Clear(ClearBufferMask.ColorBufferBit);
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         using TemporaryList<IDrawData> opaqueLayer = renderLayerRegistry[opaqueLayerId];
         using TemporaryList<IDrawData> transparentLayer = renderLayerRegistry[transparentLayerId];
@@ -80,6 +80,8 @@ public class DefaultRenderer : Renderer
         
         GL.DepthMask(false);
         RenderLayer(transparentLayer);
+        
+        GL.DepthMask(true);
         
         GL.Disable(EnableCap.DepthTest);
         GL.Enable(EnableCap.Blend);
