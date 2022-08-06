@@ -7,12 +7,8 @@ using OpenTK.Mathematics;
 
 namespace FlexFramework.Core.EntitySystem.Default;
 
-public class TexturedEntity : Entity, IRenderable, ITransformable
+public class TexturedEntity : Entity, IRenderable
 {
-    public Vector3d Position { get; set; } = Vector3d.Zero;
-    public Vector3d Scale { get; set; } = Vector3d.One;
-    public Quaterniond Rotation { get; set; } = Quaterniond.Identity;
-
     public Texture2D Texture { get; set; }
     public bool MaintainAspectRatio { get; set; } = true;
 
@@ -35,23 +31,17 @@ public class TexturedEntity : Entity, IRenderable, ITransformable
         {
             return;
         }
-
-        matrixStack.Push();
         
+        matrixStack.Push();
         if (MaintainAspectRatio)
         {
             matrixStack.Scale(Texture.Width / (double) Texture.Height, 1.0, 1.0);
         }
         
-        matrixStack.Scale(Scale);
-        matrixStack.Rotate(Rotation);
-        matrixStack.Translate(Position);
-
         vertexDrawData.Transformation = (matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection).ToMatrix4();
         vertexDrawData.Texture = Texture;
         
         renderer.EnqueueDrawData(layerId, vertexDrawData);
-        
         matrixStack.Pop();
     }
     

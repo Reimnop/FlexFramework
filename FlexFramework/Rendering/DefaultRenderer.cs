@@ -32,7 +32,7 @@ public class DefaultRenderer : Renderer
         unlitShader = LoadProgram("unlit", "Assets/Shaders/unlit");
         textShader = LoadProgram("text", "Assets/Shaders/text");
         
-        GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        GL.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     private ShaderProgram LoadProgram(string name, string path)

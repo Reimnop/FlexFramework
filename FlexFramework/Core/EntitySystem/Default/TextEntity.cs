@@ -9,12 +9,8 @@ using Textwriter;
 
 namespace FlexFramework.Core.EntitySystem.Default;
 
-public class TextEntity : Entity, IRenderable, ITransformable
+public class TextEntity : Entity, IRenderable
 {
-    public Vector3d Position { get; set; } = Vector3d.Zero;
-    public Vector3d Scale { get; set; } = Vector3d.One;
-    public Quaterniond Rotation { get; set; } = Quaterniond.Identity;
-
     private TextDrawData textDrawData;
 
     private Mesh<TextVertex> mesh;

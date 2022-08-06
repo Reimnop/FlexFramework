@@ -30,12 +30,11 @@ public class TestScene : Scene
     private AudioSource source;
     
     private MeshEntity[] meshEntities;
+    private Vector3d[] scales;
+    private Vector3d[] positions;
+    
     private FilterButterworth[] filtersLp;
     private FilterButterworth[] filtersHp;
-
-    private AnimatedEntity animatedEntity;
-    private TexturedEntity texturedEntity;
-    private Animation animation;
 
     private double scale = 0.0f;
     
@@ -66,6 +65,8 @@ public class TestScene : Scene
         filtersLp = new FilterButterworth[barCount];
         filtersHp = new FilterButterworth[barCount];
         meshEntities = new MeshEntity[barCount];
+        scales = new Vector3d[barCount];
+        positions = new Vector3d[barCount];
         
         float noteStep = 120.0f / barCount;
         float a = MathF.Pow(2, 1.0f / 12.0f);
@@ -84,22 +85,8 @@ public class TestScene : Scene
             
             meshEntities[i] = new MeshEntity();
             meshEntities[i].Mesh = Engine.PersistentResources.QuadMesh;
-            meshEntities[i].Position = new Vector3d(MathHelper.Lerp(-4.0, 4.0, i / (double) (barCount - 1)), 0.0, 0.0);
+            positions[i] = new Vector3d(MathHelper.Lerp(-4.0, 4.0, i / (double) (barCount - 1)), 0.0, 0.0);
         }
-
-        animation = new Animation(60.0);
-        for (int i = 1; i < 20; i++)
-        {
-            animation.LoadFrame($"enchart/Enchart{i.ToString().PadLeft(4, '0')}.png");
-        }
-        
-        animatedEntity = new AnimatedEntity(Engine);
-        animatedEntity.Animation = animation;
-
-        texturedEntity = new TexturedEntity(Engine);
-        texturedEntity.Position = -Vector3d.UnitY * 0.2;
-        texturedEntity.Scale = Vector3d.One * 0.125;
-        texturedEntity.Texture = Texture2D.FromFile("face", "enchart/Face1.png");
     }
 
     public override void Update(UpdateArgs args)
@@ -129,46 +116,41 @@ public class TestScene : Scene
         {
             float filterValue = MathF.Abs(filtersHp[i].Value);
 
-            meshEntities[i].Scale = new Vector3d(0.075, MathHelper.Lerp(meshEntities[i].Scale.Y,  filterValue * 32.0 + 0.1, args.DeltaTime * 8.0), 1.0);
+            scales[i] = new Vector3d(0.075, MathHelper.Lerp(scales[i].Y,  filterValue * 32.0 + 0.1, args.DeltaTime * 8.0), 1.0);
         }
         scale = MathHelper.Lerp(scale, Math.Abs(filtersHp[11].Value * 2.0), args.DeltaTime * 4.0);
-
-        texturedEntity.Update(args);
-        animatedEntity.Update(args);
     }
 
     public override void Render(Renderer renderer)
     {
         CameraData cameraData = camera.GetCameraData(Engine.ClientSize);
-        
-        transform.Push();
-        transform.Translate(mouseVector.X * 0.05, mouseVector.Y * 0.05, 0.0);
-        
+
         transform.Push();
         transform.Translate(-Engine.ClientSize.X / 2.0, Engine.ClientSize.Y / 2.0, 0.0);
         transform.Scale(camera.Size / Engine.ClientSize.Y, camera.Size / Engine.ClientSize.Y, 1.0);
         fpsEntity.Render(renderer, guiLayerId, transform, cameraData);
         transform.Pop();
+        
+        transform.Push();
+        transform.Translate(mouseVector.X * 0.05, mouseVector.Y * 0.05, 0.0);
 
         transform.Push();
         transform.Scale(scale + 1.0, scale + 1.0, 0.0);
         for (int i = 0; i < meshEntities.Length; i++)
         {
+            transform.Push();
+            transform.Scale(scales[i]);
+            transform.Translate(positions[i]);
             meshEntities[i].Render(renderer, opaqueLayerId, transform, cameraData);
+            transform.Pop();
         }
         transform.Pop();
         
         transform.Push();
         transform.Scale(1.0 + scale * 0.5, 1.0 - scale * 0.5, 1.0);
         transform.Translate(1.5, -1.5 + scale, 0.2);
-        animatedEntity.Render(renderer, transparentLayerId, transform, cameraData);
         
-        transform.Push();
-        transform.Translate(-mouseVector.X * 0.05, mouseVector.Y * 0.05, 0.0);
-        texturedEntity.Render(renderer, transparentLayerId, transform, cameraData);
         transform.Pop();
-        transform.Pop();
-        
         transform.Pop();
     }
 
