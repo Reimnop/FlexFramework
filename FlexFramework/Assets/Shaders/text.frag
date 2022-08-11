@@ -1,9 +1,13 @@
-﻿#version 430 core
+﻿#version 150
+
+#extension GL_ARB_explicit_attrib_location : enable
+#extension GL_ARB_explicit_uniform_location : enable
+
 layout(location = 0) out vec4 fragColor;
 
-layout(location = 0) in vec2 UV;
-layout(location = 1) in vec4 Color;
-layout(location = 2) flat in int Index;
+in vec2 UV;
+in vec4 Color;
+flat in int Index;
 
 layout(location = 1) uniform sampler2D atlas[16];
 

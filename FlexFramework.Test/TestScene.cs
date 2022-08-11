@@ -116,7 +116,7 @@ public class TestScene : Scene
         {
             float filterValue = MathF.Abs(filtersHp[i].Value);
 
-            scales[i] = new Vector3d(0.075, MathHelper.Lerp(scales[i].Y,  filterValue * 32.0 + 0.1, args.DeltaTime * 8.0), 1.0);
+            scales[i] = new Vector3d(0.075, MathHelper.Lerp(scales[i].Y,  filterValue * 32.0 + 0.1, args.DeltaTime * 10.0), 1.0);
         }
         scale = MathHelper.Lerp(scale, Math.Abs(filtersHp[11].Value * 2.0), args.DeltaTime * 4.0);
     }
@@ -132,7 +132,7 @@ public class TestScene : Scene
         transform.Pop();
         
         transform.Push();
-        transform.Translate(mouseVector.X * 0.05, mouseVector.Y * 0.05, 0.0);
+        transform.Translate(mouseVector.X * 0.05, -mouseVector.Y * 0.05, 0.0);
 
         transform.Push();
         transform.Scale(scale + 1.0, scale + 1.0, 0.0);

@@ -1,10 +1,14 @@
-﻿#version 430 core
+﻿#version 150
+
+#extension GL_ARB_explicit_attrib_location : enable
+#extension GL_ARB_explicit_uniform_location : enable
+
 layout(location = 0) out vec4 fragColor;
 
 layout(location = 1) uniform bool hasTexture;
 layout(location = 2) uniform sampler2D _texture;
 
-layout(location = 0) in vec2 Uv;
+in vec2 Uv;
 
 void main() {
     vec4 outColor = vec4(1.0);

@@ -1,12 +1,16 @@
-﻿#version 430 core
+﻿#version 150
+
+#extension GL_ARB_explicit_attrib_location : enable
+#extension GL_ARB_explicit_uniform_location : enable
+
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec4 aColor;
 layout(location = 2) in vec2 aUv;
 layout(location = 3) in int aIndex;
 
-layout(location = 0) out vec2 UV;
-layout(location = 1) out vec4 Color;
-layout(location = 2) flat out int Index;
+out vec2 UV;
+out vec4 Color;
+flat out int Index;
 
 layout(location = 0) uniform mat4 mvp;
 

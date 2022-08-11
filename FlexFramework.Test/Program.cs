@@ -10,7 +10,7 @@ NativeWindowSettings nws = new NativeWindowSettings()
 {
     Title = "FlexFramework Test",
     Size = new Vector2i(1366, 768),
-    APIVersion = new Version(4, 3),
+    APIVersion = new Version(3, 2),
     Profile = ContextProfile.Core
 };
 
