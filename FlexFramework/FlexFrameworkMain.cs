@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
-using FlexFramework.Audio;
+using FlexFramework.Core.Audio;
 using FlexFramework.Core;
 using FlexFramework.Core.Util;
 using FlexFramework.Rendering;
@@ -20,6 +20,7 @@ public class FlexFrameworkMain : NativeWindow
     public PersistentResources PersistentResources { get; }
     public SceneManager SceneManager { get; }
     public AudioManager AudioManager { get; }
+    public Input Input { get; }
 
     private double time = 0.0;
 
@@ -42,6 +43,7 @@ public class FlexFrameworkMain : NativeWindow
         SceneManager = new SceneManager(this);
         PersistentResources = new PersistentResources();
         AudioManager = new AudioManager();
+        Input = new Input(this);
     }
 
     private void LogGlMessage(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)

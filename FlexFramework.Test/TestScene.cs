@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 using System.Globalization;
-using FlexFramework.Audio;
+using FlexFramework.Core.Audio;
 using FlexFramework.Core;
 using FlexFramework.Core.EntitySystem;
 using FlexFramework.Core.EntitySystem.Default;
@@ -97,10 +97,10 @@ public class TestScene : Scene
                 .WithColor(Color.White));
         fpsEntity.SetText(textBuilder.Build());
 
-        Vector2 mousePos = Engine.MouseState.Position;
-        mousePos = (Vector2) Engine.ClientSize * 0.5f - mousePos;
+        Vector2d mousePos = Engine.Input.MousePosition;
+        mousePos = (Vector2d) Engine.ClientSize * 0.5f - mousePos;
         
-        mouseVector = mousePos / ((Vector2) Engine.ClientSize * 0.5f);
+        mouseVector = mousePos / ((Vector2d) Engine.ClientSize * 0.5);
 
         int pos = source.SamplePosition;
         for (int i = lastSample; i < pos; i++)

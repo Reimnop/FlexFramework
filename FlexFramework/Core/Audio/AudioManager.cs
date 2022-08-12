@@ -1,6 +1,6 @@
 ﻿using OpenTK.Audio.OpenAL;
 
-namespace FlexFramework.Audio;
+namespace FlexFramework.Core.Audio;
 
 public class AudioManager : IDisposable
 {

@@ -1,7 +1,7 @@
 ﻿using OpenTK.Audio.OpenAL;
 using OpenTK.Mathematics;
 
-namespace FlexFramework.Audio;
+namespace FlexFramework.Core.Audio;
 
 public class AudioSource : IDisposable
 {
