@@ -30,7 +30,15 @@ public class Mesh<T> : IDisposable where T : struct
     public void LoadData(T[] vertices)
     {
         Count = vertices.Length;
-        VertexBuffer.LoadData(vertices);
+
+        if (VertexBuffer.SizeInBytes >= vertices.Length * Unsafe.SizeOf<T>())
+        {
+            VertexBuffer.LoadDataPartial(vertices, 0);
+        }
+        else
+        {
+            VertexBuffer.LoadData(vertices);
+        }
     }
 
     public void Attribute(int size, int offset, VertexAttribType vertexAttribType, bool normalized)

@@ -25,8 +25,6 @@ public class TestScene : Scene
     private int transparentLayerId;
     private int guiLayerId;
 
-    private Font robotoRegular;
-
     private AudioSource source;
     
     private MeshEntity[] meshEntities;
@@ -57,9 +55,8 @@ public class TestScene : Scene
         camera.DepthNear = -10.0;
         camera.DepthFar = 10.0;
 
-        robotoRegular = Engine.TextResources.GetFont("roboto-regular");
-
-        fpsEntity = new TextEntity();
+        Font robotoRegular = Engine.TextResources.GetFont("roboto-regular");
+        fpsEntity = new TextEntity(Engine, robotoRegular);
 
         const int barCount = 64;
         filtersLp = new FilterButterworth[barCount];
@@ -91,11 +88,7 @@ public class TestScene : Scene
 
     public override void Update(UpdateArgs args)
     {
-        TextBuilder textBuilder = new TextBuilder(Engine.TextResources.Fonts)
-            .WithBaselineOffset(-robotoRegular.Height)
-            .AddText(new StyledText(Math.Floor(1.0 / args.DeltaTime).ToString(CultureInfo.InvariantCulture), robotoRegular)
-                .WithColor(Color.White));
-        fpsEntity.SetText(textBuilder.Build());
+        fpsEntity.Text = Math.Floor(1.0 / args.DeltaTime).ToString(CultureInfo.InvariantCulture);
 
         Vector2d mousePos = Engine.Input.MousePosition;
         mousePos = (Vector2d) Engine.ClientSize * 0.5f - mousePos;
@@ -127,6 +120,7 @@ public class TestScene : Scene
 
         transform.Push();
         transform.Translate(-Engine.ClientSize.X / 2.0, Engine.ClientSize.Y / 2.0, 0.0);
+        transform.Translate(0.0, -24.0, 0.0);
         transform.Scale(camera.Size / Engine.ClientSize.Y, camera.Size / Engine.ClientSize.Y, 1.0);
         fpsEntity.Render(renderer, guiLayerId, transform, cameraData);
         transform.Pop();

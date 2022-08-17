@@ -10,12 +10,13 @@ namespace FlexFramework.Core.EntitySystem.Default;
 public class MeshEntity : Entity, IRenderable
 {
     public Mesh<Vertex>? Mesh { get; set; }
+    public Color4 Color { get; set; } = Color4.White;
 
     private readonly VertexDrawData vertexDrawData;
-    
+
     public MeshEntity()
     {
-        vertexDrawData = new VertexDrawData(null, 0, Matrix4.Identity);
+        vertexDrawData = new VertexDrawData(null, 0, Matrix4.Identity, Color);
     }
     
     public override void Update(UpdateArgs args)
@@ -29,8 +30,11 @@ public class MeshEntity : Entity, IRenderable
             return;
         }
 
+        vertexDrawData.Color = Color;
+
         vertexDrawData.VertexArray = Mesh.VertexArray;
         vertexDrawData.Count = Mesh.Count;
+        vertexDrawData.Color = Color;
 
         vertexDrawData.Transformation = (matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection).ToMatrix4();
         renderer.EnqueueDrawData(layerId, vertexDrawData);

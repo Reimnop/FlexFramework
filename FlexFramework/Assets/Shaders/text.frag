@@ -10,6 +10,7 @@ in vec4 Color;
 flat in int Index;
 
 layout(location = 1) uniform sampler2D atlas[16];
+layout(location = 17) uniform vec4 overlayColor;
 
 void main() {
     vec4 outCol = vec4(1.0);
@@ -18,5 +19,5 @@ void main() {
         outCol = Index > 0 ? vec4(1.0, 1.0, 1.0, texCol.r) : texCol;
     }
 
-    fragColor = outCol * Color;
+    fragColor = outCol * Color * overlayColor;
 }

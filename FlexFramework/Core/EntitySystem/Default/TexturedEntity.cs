@@ -11,6 +11,7 @@ public class TexturedEntity : Entity, IRenderable
 {
     public Texture2D Texture { get; set; }
     public bool MaintainAspectRatio { get; set; } = true;
+    public Color4 Color { get; set; } = Color4.White;
 
     private Mesh<Vertex> quadMesh;
     private TexturedVertexDrawData vertexDrawData;
@@ -18,7 +19,7 @@ public class TexturedEntity : Entity, IRenderable
     public TexturedEntity(FlexFrameworkMain engine)
     {
         quadMesh = engine.PersistentResources.QuadMesh;
-        vertexDrawData = new TexturedVertexDrawData(quadMesh.VertexArray, quadMesh.Count, Matrix4.Identity, null);
+        vertexDrawData = new TexturedVertexDrawData(quadMesh.VertexArray, quadMesh.Count, Matrix4.Identity, null, Color);
     }
     
     public override void Update(UpdateArgs args)
@@ -31,6 +32,8 @@ public class TexturedEntity : Entity, IRenderable
         {
             return;
         }
+
+        vertexDrawData.Color = Color;
         
         matrixStack.Push();
         if (MaintainAspectRatio)
@@ -40,6 +43,7 @@ public class TexturedEntity : Entity, IRenderable
         
         vertexDrawData.Transformation = (matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection).ToMatrix4();
         vertexDrawData.Texture = Texture;
+        vertexDrawData.Color = Color;
         
         renderer.EnqueueDrawData(layerId, vertexDrawData);
         matrixStack.Pop();

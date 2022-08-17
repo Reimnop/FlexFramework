@@ -7,6 +7,7 @@ layout(location = 0) out vec4 fragColor;
 
 layout(location = 1) uniform bool hasTexture;
 layout(location = 2) uniform sampler2D _texture;
+layout(location = 3) uniform vec4 color;
 
 in vec2 Uv;
 
@@ -16,5 +17,5 @@ void main() {
         outColor = texture(_texture, Uv);
     }
     
-    fragColor = outColor;
+    fragColor = outColor * color;
 }

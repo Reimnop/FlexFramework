@@ -3,7 +3,7 @@ using FlexFramework.Util.Exceptions;
 
 namespace FlexFramework.Util;
 
-public class Registry<T> : IEnumerable<T>
+public class Registry<TKey, T> : IEnumerable<T>
 {
     public int Count
     {
@@ -19,11 +19,11 @@ public class Registry<T> : IEnumerable<T>
     }
     
     private List<T>? registeredObjects;
-    private Dictionary<string, int> keyToId = new Dictionary<string, int>();
+    private Dictionary<TKey, int> keyToId = new Dictionary<TKey, int>();
     
     private List<ObjectFactory<T>>? objectFactories = new List<ObjectFactory<T>>();
 
-    public T this[int key]
+    public T this[int id]
     {
         get
         {
@@ -32,26 +32,26 @@ public class Registry<T> : IEnumerable<T>
                 throw new RegistryNotFrozenException();
             }
             
-            return registeredObjects[key];
+            return registeredObjects[id];
         }
     }
 
-    public bool HasKey(int key)
+    public bool HasKey(int id)
     {
         if (registeredObjects == null)
         {
             throw new RegistryNotFrozenException();
         }
 
-        return key < registeredObjects.Count;
+        return id < registeredObjects.Count;
     }
 
-    public int GetId(string key)
+    public int GetId(TKey key)
     {
         return keyToId[key];
     }
 
-    public int Register(string key, ObjectFactory<T> factory)
+    public int Register(TKey key, ObjectFactory<T> factory)
     {
         if (registeredObjects != null)
         {
