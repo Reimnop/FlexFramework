@@ -1,10 +1,11 @@
-﻿using FlexFramework.Util.Exceptions;
+﻿using FlexFramework.Logging;
+using FlexFramework.Util.Exceptions;
 
 namespace FlexFramework.Core;
 
 public class SceneManager
 {
-    public Scene CurrentScene { get; private set; }
+    public Scene CurrentScene { get; private set; } = null!;
 
     private FlexFrameworkMain engine;
     
@@ -13,24 +14,17 @@ public class SceneManager
         this.engine = engine;
     }
 
-    public T LoadScene<T>(params object?[]? args) where T : Scene
+    public Scene LoadScene(Scene scene)
     {
-        T? scene = (T?) Activator.CreateInstance(typeof(T), args);
+        engine.LogMessage(this, Severity.Info, null, $"Loading scene [{scene.GetType().Name}]");
 
-        if (scene == null)
+        if (CurrentScene is IDisposable disposable)
         {
-            throw new LoadSceneException(typeof(T));
-        }
-
-        if (CurrentScene != null)
-        {
-            CurrentScene.Dispose();
+            disposable.Dispose();
         }
         
-        scene.SetEngine(engine);
-        scene.Init();
-
         CurrentScene = scene;
+
         return scene;
     }
 }

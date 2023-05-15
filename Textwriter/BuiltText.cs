@@ -4,16 +4,16 @@ namespace Textwriter;
 
 public class BuiltText : IEnumerable
 {
-    public ShapedText[] Texts { get; }
+    public BuiltGlyph[] Glyphs { get; }
 
-    public BuiltText(IEnumerable<ShapedText> texts)
+    public BuiltText(IEnumerable<BuiltGlyph> glyphs)
     {
-        Texts = texts.ToArray();
+        Glyphs = glyphs.ToArray();
     }
     
     public IEnumerator GetEnumerator()
     {
-        return Texts.GetEnumerator();
+        return Glyphs.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()

@@ -1,0 +1,24 @@
+﻿#version 430
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(location = 0) uniform sampler2D inputTexture;
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+
+vec3 aces(vec3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+void main() {
+    ivec2 size = imageSize(outputImage);
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 pixelSize = 1.0 / vec2(size);
+    vec2 texCoord = pixelCoord / vec2(size) + pixelSize * 0.5;
+
+    vec3 outputColor = aces(texture(inputTexture, texCoord).rgb);
+    imageStore(outputImage, pixelCoord, vec4(outputColor, 1.0));
+}

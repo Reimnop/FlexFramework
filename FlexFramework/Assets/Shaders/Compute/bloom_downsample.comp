@@ -1,0 +1,46 @@
+﻿#version 430
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(location = 0) uniform sampler2D inputTexture;
+layout(location = 1) uniform vec2 inputPixelSize;
+
+layout(rgba16f, binding = 0) uniform image2D outputImage; // should be half size of inputTexture
+
+// source: http://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare
+void main() {
+    ivec2 outputSize = imageSize(outputImage);
+    ivec2 outputPixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 pixelSize = 1.0 / vec2(outputSize);
+    vec2 texCoord = outputPixelCoord / vec2(outputSize) + pixelSize * 0.5;
+    
+    // a - b - c
+    // - j - k -
+    // d - e - f
+    // - l - m -
+    // g - h - i
+    vec3 a = texture(inputTexture, texCoord + vec2(-2.0 * pixelSize.x,  2.0 * pixelSize.y)).rgb;
+    vec3 b = texture(inputTexture, texCoord + vec2( 0.0,                2.0 * pixelSize.y)).rgb;
+    vec3 c = texture(inputTexture, texCoord + vec2( 2.0 * pixelSize.x,  2.0 * pixelSize.y)).rgb;
+    
+    vec3 d = texture(inputTexture, texCoord + vec2(-2.0 * pixelSize.x,  0.0              )).rgb;
+    vec3 e = texture(inputTexture, texCoord + vec2( 0.0,                0.0              )).rgb;
+    vec3 f = texture(inputTexture, texCoord + vec2( 2.0 * pixelSize.x,  0.0              )).rgb;
+    
+    vec3 g = texture(inputTexture, texCoord + vec2(-2.0 * pixelSize.x, -2.0 * pixelSize.y)).rgb;
+    vec3 h = texture(inputTexture, texCoord + vec2( 0.0,               -2.0 * pixelSize.y)).rgb;
+    vec3 i = texture(inputTexture, texCoord + vec2( 2.0 * pixelSize.x, -2.0 * pixelSize.y)).rgb;
+    
+    vec3 j = texture(inputTexture, texCoord + vec2(-pixelSize.x,        pixelSize.y      )).rgb;
+    vec3 k = texture(inputTexture, texCoord + vec2( pixelSize.x,        pixelSize.y      )).rgb;
+    vec3 l = texture(inputTexture, texCoord + vec2(-pixelSize.x,       -pixelSize.y      )).rgb;
+    vec3 m = texture(inputTexture, texCoord + vec2( pixelSize.x,       -pixelSize.y      )).rgb;
+    
+    vec3 outputColor = e * 0.125;
+    outputColor += (a + c + g + i) * 0.03125;
+    outputColor += (b + d + f + h) * 0.0625;
+    outputColor += (j + k + l + m) * 0.125;
+    
+    outputColor = max(outputColor, 0.00001);
+
+    imageStore(outputImage, outputPixelCoord, vec4(outputColor, 1.0));
+}

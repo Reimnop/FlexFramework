@@ -1,46 +1,45 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <LangVersion>11</LangVersion>
+        <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <DefineConstants>$(DefineConstants)</DefineConstants>
+
+        <!-- Show UI bounding boxes -->
+        <!-- <DefineConstants>DEBUG_SHOW_BOUNDING_BOXES</DefineConstants> -->
+    </PropertyGroup>
+
     <ItemGroup>
-      <PackageReference Include="OpenTK" Version="4.7.4" />
-      <PackageReference Include="StbImageSharp" Version="2.27.11" />
+        <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
+        <PackageReference Include="BepuPhysics" Version="2.4.0" />
+        <PackageReference Include="HalfMaid.Async" Version="0.9.2" />
+        <PackageReference Include="NVorbis" Version="0.10.4" />
+        <PackageReference Include="OpenTK" Version="4.7.7" />
+        <PackageReference Include="SharpEXR" Version="1.0.0.19" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
+        <PackageReference Include="System.IO.Hashing" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Assets\Shaders\unlit.frag">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Assets\Shaders\unlit.vert">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Assets\Shaders\text.frag">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Assets\Shaders\text.vert">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Assets\Fonts\Roboto-Bold.ttf">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Assets\Fonts\Roboto-Italic.ttf">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Assets\Fonts\Roboto-Regular.ttf">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+        <Content Include="Assets/**/*.*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Textwriter\Textwriter.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
       <None Update="openal32.dll">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\Textwriter\Textwriter.csproj" />
     </ItemGroup>
 
 </Project>

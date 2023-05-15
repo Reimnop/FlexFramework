@@ -1,0 +1,45 @@
+﻿#version 430
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(location = 0) uniform sampler2D inputTexture1; // last image in upsample mipchain
+layout(location = 1) uniform sampler2D inputTexture2; // image in downsample mipchain
+layout(location = 2) uniform float strength = 0.8;
+
+layout(rgba16f, binding = 0) uniform image2D outputImage; // should be double size of inputTexture
+
+// source: http://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare
+void main() {
+    ivec2 size = imageSize(outputImage);
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 pixelSize = 1.0 / vec2(size);
+    vec2 texCoord = pixelCoord / vec2(size) + pixelSize * 0.5;
+    
+    float x = 0.005;
+    float y = 0.005;
+    
+    // a - b - c
+    // d - e - f
+    // g - h - i
+    vec3 a = texture(inputTexture1, texCoord + vec2(-x,    y)).rgb;
+    vec3 b = texture(inputTexture1, texCoord + vec2( 0.0,  y)).rgb;
+    vec3 c = texture(inputTexture1, texCoord + vec2( x,    y)).rgb;
+    
+    vec3 d = texture(inputTexture1, texCoord + vec2(-x,  0.0)).rgb;
+    vec3 e = texture(inputTexture1, texCoord + vec2( 0.0    )).rgb;
+    vec3 f = texture(inputTexture1, texCoord + vec2( x,  0.0)).rgb;
+    
+    vec3 g = texture(inputTexture1, texCoord + vec2(-x,   -y)).rgb;
+    vec3 h = texture(inputTexture1, texCoord + vec2( 0.0, -y)).rgb;
+    vec3 i = texture(inputTexture1, texCoord + vec2( x,   -y)).rgb;
+    
+    //          | 1 2 1 |
+    // 1 / 16 * | 2 4 2 |
+    //          | 1 2 1 |
+    vec3 upsample = e * 4.0;
+    upsample += (b + d + f + h) * 2.0;
+    upsample += (a + c + g + i);
+    upsample *= 1.0 / 16.0;
+    
+    vec3 outputColor = mix(texture(inputTexture2, texCoord).rgb, upsample, strength);
+    imageStore(outputImage, pixelCoord, vec4(outputColor, 1.0));
+}

@@ -4,25 +4,27 @@ using System.Numerics;
 
 namespace Textwriter;
 
-public class AtlasTexture
+public class AtlasTexture<T> where T : unmanaged
 {
-    public ClientTexture Texture { get; }
+    private const int Gap = 1;
+    
+    public ClientTexture<T> Texture { get; }
 
     private int ptrX = 0;
     private int ptrY = 0;
     private int maxY = 0;
 
-    public AtlasTexture(int width, int height, int pixelSize)
+    public AtlasTexture(int width, int height)
     {
-        Texture = new ClientTexture(width, height, pixelSize);
+        Texture = new ClientTexture<T>(width, height);
     }
 
-    public UvInfo AddGlyphTexture(ClientTexture texture)
+    public UvInfo AddGlyphTexture(ClientTexture<T> texture)
     {
         // overflow check
         if (ptrX + texture.Width > Texture.Width)
         {
-            ptrY += maxY + 4;
+            ptrY += maxY + Gap;
             maxY = 0;
             ptrX = 0;
         }
@@ -38,7 +40,7 @@ public class AtlasTexture
             Min = new Vector2(ptrX / (float)Texture.Width, ptrY / (float)Texture.Height),
             Max = new Vector2((ptrX + texture.Width) / (float)Texture.Width, (ptrY + texture.Height) / (float)Texture.Height)
         };
-        ptrX += texture.Width + 4;
+        ptrX += texture.Width + Gap;
         maxY = Math.Max(maxY, texture.Height);
         return uvInfo;
     }

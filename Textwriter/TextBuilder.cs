@@ -1,32 +1,44 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Numerics;
+using System.Text.RegularExpressions;
 
 namespace Textwriter;
 
 public class TextBuilder
 {
+    private class Line
+    {
+        public List<BuiltGlyph> Glyphs { get; } = new List<BuiltGlyph>();
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+
+        public Line(int height)
+        {
+            Height = height;
+        }
+        
+        public void AddGlyph(BuiltGlyph glyph, int width, int height)
+        {
+            Glyphs.Add(glyph);
+            Width += width;
+            Height = Math.Max(Height, height);
+        }
+    }
+    
     private readonly List<StyledText> styledTexts = new List<StyledText>();
-    private readonly Dictionary<AtlasTexture, int> atlases = new Dictionary<AtlasTexture, int>();
+    private readonly Dictionary<AtlasTexture<Vector3>, int> atlases = new Dictionary<AtlasTexture<Vector3>, int>();
+    private int minLineHeight = 0;
     private int baselineOffset = 0;
     private HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left;
     private VerticalAlignment verticalAlignment = VerticalAlignment.Bottom;
-
-    public TextBuilder(params Font[] fonts)
+    
+    /// <param name="minLineHeight">Use height of first font if null</param>
+    public TextBuilder(int? minLineHeight, IReadOnlyList<Font> fonts)
     {
-        int texIndex = 0;
-        for (int i = 0; i < fonts.Length; i++)
+        for (int i = 0; i < fonts.Count; i++)
         {
-            if (fonts[i].GrayscaleAtlas != null)
-            {
-                atlases.Add(fonts[i].GrayscaleAtlas, texIndex);
-                texIndex++;
-            }
-
-            if (fonts[i].ColoredAtlas != null)
-            {
-                atlases.Add(fonts[i].ColoredAtlas, texIndex);
-                texIndex++;
-            }
+            atlases.Add(fonts[i].Atlas, i);
         }
+        this.minLineHeight = minLineHeight ?? fonts[0].Height;
     }
 
     public TextBuilder AddText(StyledText text)
@@ -61,147 +73,112 @@ public class TextBuilder
 
     public BuiltText Build()
     {
-        List<List<ShapedText>> shapedTextLines = new List<List<ShapedText>>();
-        shapedTextLines.Add(new List<ShapedText>());
-
-        foreach (StyledText text in styledTexts)
+        List<Line> builtLines = new List<Line>();
+        foreach (List<StyledText> line in EnumerateTextLines(styledTexts))
         {
-            List<ShapedText> shapedTexts = SplitStyledTextIntoShapedTextLines(text);
-            shapedTextLines[^1].Add(shapedTexts[0]);
-
-            for (int i = 1; i < shapedTexts.Count; i++)
+            Line builtLine = new Line(minLineHeight);
+            int advance = 0;
+            foreach (var (glyphInfo, style) in EnumerateStyledTexts(line))
             {
-                shapedTextLines.Add(new List<ShapedText>());
-                shapedTextLines[^1].Add(shapedTexts[i]);
+                BuiltGlyph glyph = new BuiltGlyph(
+                    style, glyphInfo.Font, 
+                    advance, 0, 
+                    glyphInfo.Index, atlases[glyphInfo.Font.Atlas]);
+                builtLine.AddGlyph(glyph, glyphInfo.AdvanceX, glyphInfo.Font.Height);
+                advance += glyphInfo.AdvanceX;
+            }
+            builtLines.Add(builtLine);
+        }
+
+        int textOffsetY = 0;
+        foreach (Line line in builtLines)
+        {
+            switch (verticalAlignment)
+            {
+                case VerticalAlignment.Top:
+                    textOffsetY -= line.Height;
+                    break;
+                case VerticalAlignment.Center:
+                    textOffsetY -= line.Height / 2;
+                    break;
+                case VerticalAlignment.Bottom:
+                    break;
             }
         }
         
-        int offsetY = baselineOffset + GetOffsetY(shapedTextLines, verticalAlignment);
-        for (int i = 0; i < shapedTextLines.Count; i++)
+        List<BuiltGlyph> glyphs = new List<BuiltGlyph>();
+        int advanceY = textOffsetY + baselineOffset;
+        foreach (Line line in builtLines)
         {
-            List<ShapedText> line = shapedTextLines[i];
+            int offsetX = 0;
+            switch (horizontalAlignment)
+            {
+                case HorizontalAlignment.Left:
+                    break;
+                case HorizontalAlignment.Center:
+                    offsetX = -line.Width / 2;
+                    break;
+                case HorizontalAlignment.Right:
+                    offsetX = -line.Width;
+                    break;
+            }
             
-            int offsetX = GetOffsetX(line, horizontalAlignment);
-            line[0].Break = true;
-            foreach (ShapedText shapedText in line)
+            foreach (BuiltGlyph glyph in line.Glyphs)
             {
-                shapedText.OffsetX = offsetX;
-                shapedText.OffsetY = offsetY;
+                BuiltGlyph currentGlyph = glyph;
+                currentGlyph.OffsetX += offsetX;
+                currentGlyph.OffsetY = advanceY;
+                glyphs.Add(currentGlyph);
             }
-
-            if (i + 1 < shapedTextLines.Count)
-            {
-                offsetY -= GetLineHeight(shapedTextLines[i + 1]);
-            }
+            advanceY += line.Height;
         }
 
-        List<ShapedText> result = new List<ShapedText>();
-        foreach (List<ShapedText> shapedTexts in shapedTextLines)
-        {
-            result.AddRange(shapedTexts);
-        }
-
-        return new BuiltText(result);
+        return new BuiltText(glyphs);
     }
 
-    private List<ShapedText> SplitStyledTextIntoShapedTextLines(StyledText text)
+    private static IEnumerable<List<StyledText>> EnumerateTextLines(IEnumerable<StyledText> texts)
     {
-        List<ShapedText> result = new List<ShapedText>();
-        string[] strs = Regex.Split(text.Text, "\n|\r\n");
-        foreach (string str in strs)
+        Regex regex = new Regex(@"\n|\r\n");
+        List<StyledText> currentLine = new List<StyledText>();
+        foreach (StyledText text in texts)
         {
-            GlyphInfo[] glyphs = text.Font.ShapeText(str);
-            BuiltGlyph[] builtGlyphs = new BuiltGlyph[glyphs.Length];
-
-            for (int i = 0; i < glyphs.Length; i++)
+            string[] lines = regex.Split(text.Text);
+            if (lines.Length > 1)
             {
-                builtGlyphs[i] = new BuiltGlyph
+                currentLine.Add(new StyledText(lines[0], text.Style, text.Font));
+                yield return currentLine;
+                
+                for (int i = 1; i < lines.Length; i++)
                 {
-                    AdvanceX = glyphs[i].AdvanceX,
-                    AdvanceY = glyphs[i].AdvanceY,
-                    OffsetX = glyphs[i].OffsetX,
-                    OffsetY = glyphs[i].OffsetY,
-                    Index = glyphs[i].Index,
-                    TextureIndex = glyphs[i].Colored
-                        ? -(atlases[text.Font.ColoredAtlas] + 1)
-                        : atlases[text.Font.GrayscaleAtlas] + 1
-                };
+                    yield return new List<StyledText>()
+                    {
+                        new StyledText(lines[i], text.Style, text.Font)
+                    };
+                }
+                
+                currentLine.Clear();
             }
-
-            ShapedText shapedText = new ShapedText();
-            shapedText.Glyphs = builtGlyphs;
-            shapedText.Style = text.Style;
-            shapedText.Font = text.Font;
-            result.Add(shapedText);
-        }
-
-        return result;
-    }
-
-    private int GetOffsetX(List<ShapedText> shapedTexts, HorizontalAlignment horizontalAlignment)
-    {
-        switch (horizontalAlignment)
-        {
-            case HorizontalAlignment.Left:
-                return 0;
-            case HorizontalAlignment.Center:
-                return -GetLineSize(shapedTexts) / 2;
-            case HorizontalAlignment.Right:
-                return -GetLineSize(shapedTexts);
-            default:
-                throw new ArgumentException();
-        }
-    }
-
-    private int GetOffsetY(List<List<ShapedText>> paragraph, VerticalAlignment verticalAlignment)
-    {
-        switch (verticalAlignment)
-        {
-            case VerticalAlignment.Bottom:
-                return 0;
-            case VerticalAlignment.Center:
-                return GetParagraphHeight(paragraph) / 2;
-            case VerticalAlignment.Top:
-                return GetParagraphHeight(paragraph);
-            default:
-                throw new ArgumentException();
-        }
-    }
-
-    private int GetParagraphHeight(List<List<ShapedText>> paragraph)
-    {
-        int result = 0;
-        foreach (List<ShapedText> line in paragraph)
-        {
-            result += GetLineHeight(line);
-        }
-
-        return result;
-    }
-
-    private int GetLineHeight(List<ShapedText> shapedTexts)
-    {
-        int result = 0;
-        foreach (ShapedText shapedText in shapedTexts)
-        {
-            result = Math.Max(result, shapedText.Font.Height);
-        }
-
-        return result;
-    }
-
-    private int GetLineSize(List<ShapedText> shapedTexts)
-    {
-        int result = 0;
-        foreach (ShapedText shapedText in shapedTexts)
-        {
-            foreach (BuiltGlyph glyphInfo in shapedText.Glyphs)
+            else
             {
-                Glyph glyph = shapedText.Font.GetGlyph(glyphInfo.Index);
-                result += glyph.AdvanceX;
+                currentLine.Add(text);
             }
         }
+        
+        if (currentLine.Count > 0)
+        {
+            yield return currentLine;
+        }
+    }
 
-        return result;
+    private static IEnumerable<(GlyphInfo, Style)> EnumerateStyledTexts(IEnumerable<StyledText> texts)
+    {
+        foreach (StyledText text in texts)
+        {
+            // Shape the text
+            foreach (GlyphInfo glyphInfo in text.Font.ShapeText(text.Text))
+            {
+                yield return (glyphInfo, text.Style);
+            }
+        }
     }
 }

@@ -10,10 +10,11 @@ public class Input
     private readonly KeyboardState keyboard;
     private readonly MouseState mouse;
 
-    public Vector2d MousePosition => mouse.Position;
-    public Vector2d MouseDelta => mouse.Delta;
-    public Vector2d MouseScroll => mouse.Scroll;
-    public Vector2d MouseScrollDelta => mouse.ScrollDelta;
+    public bool WindowFocused => window.IsFocused;
+    public Vector2 MousePosition => mouse.Position;
+    public Vector2 MouseDelta => mouse.Delta;
+    public Vector2 MouseScroll => mouse.Scroll;
+    public Vector2 MouseScrollDelta => mouse.ScrollDelta;
 
     public bool AnyKeyDown => IsInputAvailable() && keyboard.IsAnyKeyDown;
     public bool AnyMouseButtonDown => IsInputAvailable() && mouse.IsAnyButtonDown;
@@ -88,6 +89,13 @@ public class Input
         }
         
         return keyboard.IsKeyDown(key);
+    }
+
+    public Vector2 GetMovement()
+    {
+        float x = (GetKey(Keys.D) || GetKey(Keys.Right) ? 1.0f : 0.0f) + (GetKey(Keys.A) || GetKey(Keys.Left) ? -1.0f : 0.0f);
+        float y = (GetKey(Keys.W) || GetKey(Keys.Up) ? 1.0f : 0.0f) + (GetKey(Keys.S) || GetKey(Keys.Down) ? -1.0f : 0.0f);
+        return new Vector2(x, y);
     }
 
     public bool GetKeyCombo(params Keys[] keys)

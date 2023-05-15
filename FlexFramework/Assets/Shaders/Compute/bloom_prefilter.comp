@@ -1,0 +1,30 @@
+﻿#version 430
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(location = 0) uniform sampler2D inputTexture;
+layout(location = 1) uniform float hardThreshold = 0.85;
+layout(location = 2) uniform float softThreshold = 0.75;
+
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+
+float calcBrightness(vec3 color) {
+    return max(color.r, max(color.g, color.b));
+}
+
+void main() {
+    ivec2 size = imageSize(outputImage);
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 pixelSize = 1.0 / vec2(size);
+    vec2 texCoord = pixelCoord / vec2(size) + pixelSize * 0.5;
+    
+    vec3 color = texture(inputTexture, texCoord).rgb;
+    float brightness = calcBrightness(color);
+    float knee = hardThreshold * softThreshold;
+    float soft = brightness - hardThreshold + knee;
+    soft = max(min(soft, 2.0 * knee), 0.0);
+    soft = soft * soft / (4.0 * knee + 0.00001);
+    float contribution = max(soft, brightness - hardThreshold);
+    contribution /= max(brightness, 0.00001);
+    
+    imageStore(outputImage, pixelCoord, vec4(color * contribution, 1.0));
+}

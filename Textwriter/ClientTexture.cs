@@ -3,66 +3,33 @@ using SharpFont;
 
 namespace Textwriter;
 
-public class ClientTexture
+public class ClientTexture<T> : IClientTexture where T : unmanaged
 {
     public int Width { get; }
     public int Height { get; }
-    public byte[] Pixels { get; }
-    public int PixelSize { get; }
+    public T[] Pixels { get; }
 
-    public ClientTexture(int width, int height, int pixelSize)
+    public ClientTexture(int width, int height)
     {
-        Pixels = new byte[width * height * pixelSize];
+        Pixels = new T[width * height];
         Width = width;
         Height = height;
-        PixelSize = pixelSize;
     }
 
-    public ReadOnlySpan<byte> this[int x, int y]
+    public T this[int x, int y]
     {
-        get => GetPixel(x, y);
-        set => SetPixel(x, y, value);
+        get => Pixels[y * Width + x];
+        set => Pixels[y * Width + x] = value;
     }
 
-    private ReadOnlySpan<byte> GetPixel(int x, int y)
+    public void WritePartial(ClientTexture<T> texture, int offsetX, int offsetY)
     {
-        return new ReadOnlySpan<byte>(Pixels, (y * Width + x) * PixelSize, PixelSize);
-    }
-
-    private void SetPixel(int x, int y, ReadOnlySpan<byte> value)
-    {
-        for (int i = 0; i < PixelSize; i++)
+        for (int y = 0; y < texture.Height; y++)
         {
-            Pixels[(y * Width + x) * PixelSize + i] = value[i];
-        }
-        
-    }
-
-    public void WritePartial(ClientTexture texture, int offsetX, int offsetY)
-    {
-        WritePartial(texture.Pixels, texture.Width, texture.Height, offsetX, offsetY);
-    }
-
-    public void WritePartial(byte[] pixels, int width, int height, int offsetX, int offsetY)
-    {
-        if (offsetX + width > Width || offsetY + height > Height ||
-            offsetX < 0 || offsetY < 0)
-        {
-            throw new IndexOutOfRangeException();
-        }
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < texture.Width; x++)
             {
-                SetPixel(x + offsetX, y + offsetY, new ReadOnlySpan<byte>(pixels, (y * width + x) * PixelSize, PixelSize));
+                this[x + offsetX, y + offsetY] = texture[x, y];
             }
         }
-    }
-
-    public void WritePartial(IntPtr ptr, int width, int height, int offsetX, int offsetY)
-    {
-        int offsetIndex = (offsetY * Width + offsetX) * PixelSize;
-        Marshal.Copy(ptr, Pixels, offsetIndex, width * height * PixelSize);
     }
 }

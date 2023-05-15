@@ -1,6 +1,5 @@
 ﻿using FlexFramework;
-using FlexFramework.Rendering;
-using FlexFramework.Rendering.Text;
+using FlexFramework.Core.Rendering.Renderers;
 using FlexFramework.Test;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -16,10 +15,12 @@ NativeWindowSettings nws = new NativeWindowSettings()
 
 using (FlexFrameworkMain flexFramework = new FlexFrameworkMain(nws))
 {
-    flexFramework.UseRenderer<DefaultRenderer>();
-    flexFramework.LoadFonts(24, 2048,
-        new FontFileInfo("roboto-regular", "Fonts/Roboto-Regular.ttf"));
-    flexFramework.LoadScene<TestScene>();
+    flexFramework.UseRenderer(new DefaultRenderer());
+    var textAssetsLocation = flexFramework.DefaultAssets.TextAssets;
+    var textAssets = flexFramework.ResourceRegistry.GetResource(textAssetsLocation);
+    
+    textAssets.LoadFont("Fonts/Roboto-Regular.ttf", "roboto-regular", 24);
+    flexFramework.LoadScene(new TestScene(flexFramework));
 
     while (!flexFramework.ShouldClose())
     {

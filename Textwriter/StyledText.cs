@@ -25,20 +25,6 @@ public class StyledText
         return this;
     }
 
-    public StyledText WithStrikethrough(bool value)
-    {
-        Style style = Style;
-        style.Strikethrough = value;
-        return WithStyle(style);
-    }
-    
-    public StyledText WithUnderline(bool value)
-    {
-        Style style = Style;
-        style.Underline = value;
-        return WithStyle(style);
-    }
-    
     public StyledText WithColor(Color value)
     {
         Style style = Style;
