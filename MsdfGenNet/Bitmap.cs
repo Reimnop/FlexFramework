@@ -7,6 +7,7 @@ public class Bitmap<T> : IDisposable where T : unmanaged
     public int Width { get; }
     public int Height { get; }
     public int NumChannels { get; }
+    public ReadOnlySpan<T> Pixels => pixels;
     internal BitmapRef Reference { get; }
 
     private T[] pixels;

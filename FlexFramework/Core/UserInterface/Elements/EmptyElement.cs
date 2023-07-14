@@ -1,15 +1,11 @@
-﻿namespace FlexFramework.Core.UserInterface.Elements;
+﻿using OpenTK.Mathematics;
+
+namespace FlexFramework.Core.UserInterface.Elements;
 
 public class EmptyElement : Element
 {
-    public EmptyElement(params Element[] children)
+    protected override void UpdateLayout(Box2 bounds)
     {
-        Children.AddRange(children);
-    }
-
-    public override void UpdateLayout(Bounds constraintBounds)
-    {
-        base.UpdateLayout(constraintBounds);
-        UpdateChildrenLayout(ContentBounds);
+        // Do nothing
     }
 }

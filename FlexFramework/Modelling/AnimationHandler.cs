@@ -1,5 +1,5 @@
 ﻿using FlexFramework.Modelling.Animation;
-using Assimp;
+using FlexFramework.Util;
 using OpenTK.Mathematics;
 using Quaternion = OpenTK.Mathematics.Quaternion;
 
@@ -30,7 +30,7 @@ public class AnimationHandler
         }
     }
     
-    private ImmutableNode<ModelNode> rootModelNode;
+    private Node<ModelNode> rootModelNode;
     private Dictionary<string, TransformableNode> nodes;
 
     private ModelAnimation? animation;

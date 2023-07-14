@@ -1,5 +1,4 @@
-﻿using FlexFramework.Logging;
-using FlexFramework.Util.Exceptions;
+﻿using FlexFramework.Util.Logging;
 
 namespace FlexFramework.Core;
 
@@ -7,24 +6,23 @@ public class SceneManager
 {
     public Scene CurrentScene { get; private set; } = null!;
 
-    private FlexFrameworkMain engine;
+    private readonly ILogger logger;
     
-    internal SceneManager(FlexFrameworkMain engine)
+    internal SceneManager(ILoggerFactory loggerFactory)
     {
-        this.engine = engine;
+        logger = loggerFactory.CreateLogger<SceneManager>();
     }
 
-    public Scene LoadScene(Scene scene)
+    public Scene LoadScene(Func<Scene> sceneFactory)
     {
-        engine.LogMessage(this, Severity.Info, null, $"Loading scene [{scene.GetType().Name}]");
-
+        var scene = sceneFactory();
+        
+        logger.LogInfo($"Loading scene [{scene.GetType().Name}]");
         if (CurrentScene is IDisposable disposable)
         {
             disposable.Dispose();
         }
-        
         CurrentScene = scene;
-
         return scene;
     }
 }

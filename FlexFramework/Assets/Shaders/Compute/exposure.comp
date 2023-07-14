@@ -1,8 +1,8 @@
 ﻿#version 430
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(location = 0) uniform sampler2D inputTexture;
-layout(location = 1) uniform float exposure = 1.0;
+uniform sampler2D inputTexture;
+uniform float exposure = 1.0;
 
 layout(rgba16f, binding = 0) uniform image2D outputImage;
 

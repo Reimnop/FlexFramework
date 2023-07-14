@@ -1,4 +1,5 @@
 ﻿using FlexFramework.Core.Data;
+using FlexFramework.Util;
 using OpenTK.Mathematics;
 
 namespace FlexFramework.Modelling;
@@ -7,21 +8,23 @@ public class ModelMaterial
 {
     public string Name { get; }
     public Vector3 Albedo { get; set; }
+    public Vector3 Emissive { get; set; }
     public float Metallic { get; set; } 
-    public float Roughness { get; set; } 
-    public Texture? AlbedoTexture { get; set; }
-    public Texture? MetallicTexture { get; set; }
-    public Texture? RoughnessTexture { get; set; }
+    public float Roughness { get; set; }
+    public TextureSampler? AlbedoTexture { get; set; }
+    public TextureSampler? MetallicTexture { get; set; }
+    public TextureSampler? RoughnessTexture { get; set; }
 
     public ModelMaterial(
         string name, 
-        Vector3 albedo, float metallic, float roughness, 
-        Texture? albedoTexture, Texture? metallicTexture, Texture? roughnessTexture)
+        Vector3 albedo, Vector3 emissive, float metallic, float roughness,
+        TextureSampler? albedoTexture, TextureSampler? metallicTexture, TextureSampler? roughnessTexture)
     {
         Name = name;
         Albedo = albedo;
         Metallic = metallic;
         Roughness = roughness;
+        Emissive = emissive;
         AlbedoTexture = albedoTexture;
         MetallicTexture = metallicTexture;
         RoughnessTexture = roughnessTexture;
@@ -74,7 +77,7 @@ public class Model : IDisposable
 {
     private readonly ModelImporter modelImporter;
     
-    public ImmutableNode<ModelNode> RootNode { get; }
+    public Node<ModelNode> RootNode { get; }
     public IReadOnlyList<ModelBone> Bones { get; }
     public IReadOnlyDictionary<string, int> BoneIndexMap { get; }
     
@@ -95,9 +98,9 @@ public class Model : IDisposable
     private readonly IEnumerable<ModelMaterial> lazyMaterials;
     private readonly IEnumerable<ModelAnimation> lazyAnimations;
 
-    public Model(string path)
+    public Model(Stream stream)
     {
-        modelImporter = new ModelImporter(path);
+        modelImporter = new ModelImporter(stream);
         
         RootNode = modelImporter.LoadModel();
         Bones = modelImporter.Bones;

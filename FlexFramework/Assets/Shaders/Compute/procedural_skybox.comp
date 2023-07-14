@@ -2,13 +2,16 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 const float PI = 3.1415926535897932384626433832795;
+const float POSITIVE_INF = uintBitsToFloat(0x7F800000);
 
-layout(location = 0) uniform mat4 inverseProjection;
-layout(location = 1) uniform mat4 inverseView;
-layout(location = 2) uniform vec3 lightDir;
-layout(location = 3) uniform vec3 lightColor;
+uniform mat4 inverseProjection;
+uniform mat4 inverseView;
+uniform vec3 lightDir;
+uniform vec3 lightColor;
 
 layout(rgba16f, binding = 0) uniform image2D outputImage;
+layout(rgba16f, binding = 1) uniform image2D outputNormalImage;
+layout(rgba16f, binding = 2) uniform image2D outputPositionImage;
 
 vec3 getCamDirection(vec2 uv) {
     vec4 pos = vec4(uv, 0.0, 1.0) * inverseProjection;
@@ -34,4 +37,6 @@ void main() {
     color = mix(color, lightColor * 5.0, sun);
     
     imageStore(outputImage, pixelCoord, vec4(color, 1.0));
+    imageStore(outputNormalImage, pixelCoord, vec4(-direction, 1.0));
+    imageStore(outputPositionImage, pixelCoord, vec4(direction * POSITIVE_INF, 1.0));
 }

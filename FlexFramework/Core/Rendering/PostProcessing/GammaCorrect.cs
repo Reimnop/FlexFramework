@@ -34,10 +34,11 @@ public class GammaCorrect : PostProcessor, IDisposable
         tonemappedTexture = new Texture2D("gamma-correct", size.X, size.Y, SizedInternalFormat.Rgba16f);
     }
     
-    public override void Process(GLStateManager stateManager, Texture2D texture)
+    public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
         stateManager.UseProgram(program);
         stateManager.BindTextureUnit(0, texture);
+        GL.Uniform1(program.GetUniformLocation("gamma"), Gamma);
         GL.BindImageTexture(0, tonemappedTexture.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
         GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
         GL.DispatchCompute(DivideIntCeil(CurrentSize.X, 8), DivideIntCeil(CurrentSize.Y, 8), 1);

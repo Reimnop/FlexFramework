@@ -19,25 +19,32 @@ public class SkyboxRenderer : BackgroundRenderer, IDisposable
         program.LinkShaders(shader);
     }
     
-    public override void Render(Renderer renderer, GLStateManager stateManager, Texture2D renderTarget, CameraData cameraData)
+    public override void Render(CommandList commandList, GLStateManager stateManager, IRenderBuffer renderBuffer, CameraData cameraData)
     {
         if (Texture == null)
         {
             return;
         }
-        
+
+        if (renderBuffer is not IGBuffer gBuffer)
+        {
+            return;
+        }
+
         stateManager.UseProgram(program);
         stateManager.BindTextureUnit(0, Texture);
             
         Matrix4 inverseView = Matrix4.Invert(cameraData.View);
         Matrix4 inverseProjection = Matrix4.Invert(cameraData.Projection);
             
-        GL.UniformMatrix4(1, true, ref inverseProjection);
-        GL.UniformMatrix4(2, true, ref inverseView);
+        GL.UniformMatrix4(program.GetUniformLocation("inverseProjection"), true, ref inverseProjection);
+        GL.UniformMatrix4(program.GetUniformLocation("inverseView"), true, ref inverseView);
             
-        GL.BindImageTexture(0, renderTarget.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
+        GL.BindImageTexture(0, gBuffer.WorldColor.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
+        GL.BindImageTexture(1, gBuffer.WorldNormal.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
+        GL.BindImageTexture(2, gBuffer.WorldPosition.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
         GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-        GL.DispatchCompute(MathUtil.DivideIntCeil(renderTarget.Width, 8), MathUtil.DivideIntCeil(renderTarget.Height, 8), 1);
+        GL.DispatchCompute(MathUtil.DivideIntCeil(renderBuffer.Size.X, 8), MathUtil.DivideIntCeil(renderBuffer.Size.Y, 8), 1);
     }
 
     public void Dispose()

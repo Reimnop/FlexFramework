@@ -13,7 +13,7 @@ public class Exposure : PostProcessor, IDisposable
 
     public Exposure()
     {
-        using Shader shader = new Shader("exposure", File.ReadAllText("Assets/Shaders/Compute/exposure.comp"),
+        using var shader = new Shader("exposure", File.ReadAllText("Assets/Shaders/Compute/exposure.comp"),
             ShaderType.ComputeShader);
         program = new ShaderProgram("exposure");
         program.LinkShaders(shader);
@@ -34,10 +34,10 @@ public class Exposure : PostProcessor, IDisposable
         tonemappedTexture = new Texture2D("exposure", size.X, size.Y, SizedInternalFormat.Rgba16f);
     }
     
-    public override void Process(GLStateManager stateManager, Texture2D texture)
+    public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
         stateManager.UseProgram(program);
-        GL.Uniform1(1, ExposureValue);
+        GL.Uniform1(program.GetUniformLocation("exposure"), ExposureValue);
         stateManager.BindTextureUnit(0, texture);
         GL.BindImageTexture(0, tonemappedTexture.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
         GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);

@@ -5,23 +5,24 @@ using OpenTK.Mathematics;
 
 namespace FlexFramework.Core.Rendering.RenderStrategies;
 
-public class VertexRenderStrategy : RenderStrategy
+public class VertexRenderStrategy : RenderStrategy, IDisposable
 {
-    private readonly ShaderProgram unlitShader;
+    private readonly ShaderProgram program;
     private readonly MeshHandler meshHandler = new (
             (VertexAttributeIntent.Position, 0),
             (VertexAttributeIntent.TexCoord0, 1),
             (VertexAttributeIntent.Color, 2)
         );
     private readonly TextureHandler textureHandler = new();
+    private readonly SamplerHandler samplerHandler = new();
 
     public VertexRenderStrategy()
     {
-        using var vertexShader = new Shader("unlit-vert", File.ReadAllText("Assets/Shaders/unlit.vert"), ShaderType.VertexShader);
-        using var fragmentShader = new Shader("unlit-frag", File.ReadAllText("Assets/Shaders/unlit.frag"), ShaderType.FragmentShader);
+        using var vertexShader = new Shader("unlit_vert", File.ReadAllText("Assets/Shaders/unlit.vert"), ShaderType.VertexShader);
+        using var fragmentShader = new Shader("unlit_frag", File.ReadAllText("Assets/Shaders/unlit.frag"), ShaderType.FragmentShader);
         
-        unlitShader = new ShaderProgram("unlit");
-        unlitShader.LinkShaders(vertexShader, fragmentShader);
+        program = new ShaderProgram("unlit");
+        program.LinkShaders(vertexShader, fragmentShader);
     }
 
     public override void Update(UpdateArgs args)
@@ -30,30 +31,41 @@ public class VertexRenderStrategy : RenderStrategy
         textureHandler.Update(args.DeltaTime);
     }
 
-    public override void Draw(GLStateManager glStateManager, IDrawData drawData)
+    public override void Draw(GLStateManager glStateManager, CommandList commandList, IDrawData drawData)
     {
-        VertexDrawData vertexDrawData = EnsureDrawDataType<VertexDrawData>(drawData);
+        var vertexDrawData = EnsureDrawDataType<VertexDrawData>(drawData);
         
         var mesh = meshHandler.GetMesh(vertexDrawData.Mesh);
-        Texture2D? texture = vertexDrawData.Texture != null ? textureHandler.GetTexture(vertexDrawData.Texture) : null;
-        
-        glStateManager.UseProgram(unlitShader);
+        var texture = vertexDrawData.Texture;
+
+        glStateManager.UseProgram(program);
         glStateManager.BindVertexArray(mesh.VertexArray);
 
-        Matrix4 transformation = vertexDrawData.Transformation;
-        GL.UniformMatrix4(0, true, ref transformation);
-        GL.Uniform1(1, vertexDrawData.Texture == null ? 0 : 1);
+        var transformation = vertexDrawData.Transformation;
+        GL.UniformMatrix4(program.GetUniformLocation("mvp"), true, ref transformation);
+        GL.Uniform1(program.GetUniformLocation("hasTexture"), vertexDrawData.Texture == null ? 0 : 1);
 
-        if (texture != null)
+        if (texture.HasValue)
         {
-            glStateManager.BindTextureUnit(0, texture);
+            var tex = textureHandler.GetTexture(texture.Value.Texture);
+            var sampler = samplerHandler.GetSampler(texture.Value.Sampler);
+            glStateManager.BindTextureUnit(0, tex);
+            glStateManager.BindSampler(0, sampler);
         }
 
-        GL.Uniform4(3, vertexDrawData.Color);
+        GL.Uniform4(program.GetUniformLocation("color"), vertexDrawData.Color);
 
         if (vertexDrawData.Mesh.IndicesCount > 0)
             GL.DrawElements(vertexDrawData.PrimitiveType, vertexDrawData.Mesh.IndicesCount, DrawElementsType.UnsignedInt, 0);
         else
             GL.DrawArrays(vertexDrawData.PrimitiveType, 0, vertexDrawData.Mesh.VerticesCount);
+    }
+
+    public void Dispose()
+    {
+        program.Dispose();
+        meshHandler.Dispose();
+        textureHandler.Dispose();
+        samplerHandler.Dispose();
     }
 }

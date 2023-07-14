@@ -1,16 +1,16 @@
 ﻿using FlexFramework.Core;
+using FlexFramework.Core.Data;
 using FlexFramework.Core.Entities;
-using OpenTK.Mathematics;
+using FlexFramework.Core.Rendering.Data;
+using FlexFramework.Util;
 
 namespace FlexFramework.Modelling;
 
-public class ModelEntity : Entity, IRenderable
+public class ModelEntity : Entity, IUpdateable, IRenderable
 {
     public AnimationHandler AnimationHandler { get; }
-    public Color4 Color { get; set; } = Color4.White;
 
     private readonly Model model;
-    private readonly LitMeshEntity meshEntity;
 
     private float time = 0.0f;
 
@@ -18,14 +18,11 @@ public class ModelEntity : Entity, IRenderable
     {
         this.model = model;
         
-        meshEntity = new LitMeshEntity();
         AnimationHandler = new AnimationHandler(model);
     }
 
-    public override void Update(UpdateArgs args)
+    public void Update(UpdateArgs args)
     {
-        base.Update(args);
-        
         time += args.DeltaTime;
         AnimationHandler.Update(time);
     }
@@ -36,9 +33,12 @@ public class ModelEntity : Entity, IRenderable
     }
     
     // more recursion bullshit
-    private void RenderModelRecursively(ImmutableNode<ModelNode> node, RenderArgs args)
+    private void RenderModelRecursively(Node<ModelNode> node, RenderArgs args)
     {
+        var commandList = args.CommandList;
+        var layerType = args.LayerType;
         var matrixStack = args.MatrixStack;
+        var cameraData = args.CameraData;
         var modelNode = node.Value;
 
         matrixStack.Push();
@@ -47,18 +47,31 @@ public class ModelEntity : Entity, IRenderable
         foreach (var modelMesh in modelNode.Meshes)
         {
             var material = model.Materials[modelMesh.MaterialIndex];
+
+            var materialData = new MaterialData
+            {
+                UseAlbedoTexture = material.AlbedoTexture != null,
+                UseMetallicTexture = material.MetallicTexture != null,
+                UseRoughnessTexture = material.RoughnessTexture != null,
+                Albedo = material.Albedo,
+                Emissive = material.Emissive,
+                Metallic = material.Metallic,
+                Roughness = material.Roughness
+            };
+        
+            var vertexDrawData = new LitVertexDrawData(
+                model.Meshes[modelMesh.MeshIndex].ReadOnly, 
+                matrixStack.GlobalTransformation, 
+                cameraData, 
+                (TextureSamplerPair?) material.AlbedoTexture,
+                (TextureSamplerPair?) material.MetallicTexture,
+                (TextureSamplerPair?) material.RoughnessTexture,
+                materialData);
             
-            meshEntity.Mesh = model.Meshes[modelMesh.MeshIndex];
-            meshEntity.Albedo = material.Albedo;
-            meshEntity.Metallic = material.Metallic;
-            meshEntity.Roughness = material.Roughness;
-            meshEntity.AlbedoTexture = material.AlbedoTexture;
-            meshEntity.MetallicTexture = material.MetallicTexture;
-            meshEntity.RoughnessTexture = material.RoughnessTexture;
-            meshEntity.Render(args);
+            commandList.AddDrawData(layerType, vertexDrawData);
         }
 
-        foreach (ImmutableNode<ModelNode> child in node.Children)
+        foreach (var child in node.Children)
         {
             RenderModelRecursively(child, args);
         }

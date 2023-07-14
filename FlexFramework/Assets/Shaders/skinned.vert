@@ -8,9 +8,9 @@ layout(location = 3) in vec4 aColor;
 layout(location = 4) in ivec4 aBoneIds;
 layout(location = 5) in vec4 aWeights;
 
-layout(location = 0) uniform mat4 mvp;
-layout(location = 1) uniform mat4 model;
-layout(location = 9) uniform mat4 bones[MAX_BONES];
+uniform mat4 mvp;
+uniform mat4 model;
+uniform mat4 bones[MAX_BONES];
 
 out vec2 Uv;
 out vec3 Normal;

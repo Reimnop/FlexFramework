@@ -1,31 +1,25 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using FlexFramework.Core.Data;
 using FlexFramework.Core.Rendering;
 using FlexFramework.Core.Rendering.Data;
+using FlexFramework.Text;
 using OpenTK.Mathematics;
-using Textwriter;
+using Buffer = FlexFramework.Core.Data.Buffer;
 
 namespace FlexFramework.Core.Entities;
 
 public class TextEntity : Entity, IRenderable
 {
-    public Font Font
-    {
-        get => font;
-        set
-        {
-            font = value;
-            InvalidateMesh();
-        }
-    }
+    public int BaselineOffset { get; set; }
 
-    public int BaselineOffset
+    public string Text
     {
-        get => baselineOffset;
+        get => text;
         set
         {
-            baselineOffset = value;
-            InvalidateMesh();
+            text = value;
+            InvalidateTextData();
         }
     }
 
@@ -35,7 +29,7 @@ public class TextEntity : Entity, IRenderable
         set
         {
             horizontalAlignment = value;
-            InvalidateMesh();
+            InvalidateTextData();
         }
     }
 
@@ -45,87 +39,99 @@ public class TextEntity : Entity, IRenderable
         set
         {
             verticalAlignment = value;
-            InvalidateMesh();
+            InvalidateTextData();
         }
     }
 
-    public string Text
+    public Box2 Bounds
     {
-        get => text;
+        get => bounds;
         set
         {
-            text = value;
-            InvalidateMesh();
+            bounds = value;
+            InvalidateTextData();
         }
     }
 
-    public float EmSize { get; set; } = 1.0f;
+    public Font Font
+    {
+        get => font;
+        set
+        {
+            font = value;
+            InvalidateTextData();
+        }
+    }
 
-    public Color4 Color { get; set; } = Color4.White;
+    public float EmSize
+    {
+        get => emSize;
+        set
+        {
+            emSize = value;
+            InvalidateTextData();
+        }
+    }
 
     private HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left;
-    private VerticalAlignment verticalAlignment = VerticalAlignment.Bottom;
-    private int baselineOffset = 0;
-    private Font font = null;
+    private VerticalAlignment verticalAlignment = VerticalAlignment.Top;
+    private Box2 bounds = new(0.0f, 0.0f, 0.0f, 0.0f);
+    private float emSize = 1.0f;
+
+    public Color4 Color { get; set; } = Color4.White;
+    
+    private Font font;
     private string text = "";
 
-    private bool meshValid = false;
-
-    private readonly FlexFrameworkMain engine;
-    private readonly TextAssets textAssets;
-    private readonly Mesh<TextVertex> mesh;
+    private bool dataValid = false;
     
-    private readonly List<TextVertex> vertices = new List<TextVertex>();
+    private readonly Mesh<TextVertex> mesh;
+    private readonly Texture fontAtlas;
+    
+    private readonly Buffer buffer = new();
 
-    public TextEntity(FlexFrameworkMain engine, Font font)
+    public TextEntity(Font font)
     {
-        this.engine = engine;
         this.font = font;
+        fontAtlas = new Texture("font_atlas", font.Texture.Width, font.Texture.Height, PixelFormat.Rgb32f);
+        fontAtlas.SetData<Rgb32f>(font.Texture.Pixels);
 
-        var textAssetsLocation = engine.DefaultAssets.TextAssets;
-        textAssets = engine.ResourceRegistry.GetResource(textAssetsLocation);
-        
-        VertexLayout vertexLayout = new VertexLayout(
-            Unsafe.SizeOf<TextVertex>(), 
+        var vertexLayout = new VertexLayout(
+            Unsafe.SizeOf<TextVertex>(),
             new VertexAttribute(VertexAttributeIntent.Position, VertexAttributeType.Float, 2, 0),
-            new VertexAttribute(VertexAttributeIntent.Color, VertexAttributeType.Float, 4, 2 * sizeof(float)),
-            new VertexAttribute(VertexAttributeIntent.TexCoord0, VertexAttributeType.Float, 2, 6 * sizeof(float)),
-            new VertexAttribute(VertexAttributeIntent.TexCoord1, VertexAttributeType.Int, 1, 8 * sizeof(float)));
+            new VertexAttribute(VertexAttributeIntent.TexCoord0, VertexAttributeType.Float, 2, 2 * sizeof(float))
+        );
 
         mesh = new Mesh<TextVertex>("text", vertexLayout);
     }
 
-    public void InvalidateMesh()
+    private void InvalidateTextData()
     {
-        meshValid = false;
+        dataValid = false;
     }
 
-    private void GenerateMesh()
+    private void UpdateTextData()
     {
-        TextBuilder builder = new TextBuilder(null, textAssets.Fonts)
-            .WithBaselineOffset(baselineOffset)
-            .WithHorizontalAlignment(horizontalAlignment)
-            .WithVerticalAlignment(verticalAlignment)
-            .AddText(new StyledText(text, font)
-                .WithColor(System.Drawing.Color.White));
+        var boundsMinX = (int) (bounds.Min.X * 64.0f);
+        var boundsMinY = (int) (bounds.Min.Y * 64.0f);
+        var boundsMaxX = (int) (bounds.Max.X * 64.0f);
+        var boundsMaxY = (int) (bounds.Max.Y * 64.0f);
+        var shapedText = TextShaper.ShapeText(font, text, boundsMinX, boundsMinY, boundsMaxX, boundsMaxY, emSize, horizontalAlignment, verticalAlignment);
         
-        TextMeshGenerator.GenerateVertices(builder.Build(), vertices);
+        buffer.Clear();
+        MeshGenerator.GenerateMesh(v => buffer.Append(v), shapedText);
         
-        Span<TextVertex> vertexSpan = stackalloc TextVertex[vertices.Count];
-        for (int i = 0; i < vertices.Count; i++)
-        {
-            vertexSpan[i] = vertices[i];
-        }
-        
-        mesh.SetData(vertexSpan, null);
+        // Convert ReadOnlySpan<byte> to ReadOnlySpan<TextVertex>
+        var textVertices = MemoryMarshal.Cast<byte, TextVertex>(buffer.Data);
+        mesh.SetData(textVertices, null);
     }
 
     public void Render(RenderArgs args)
     {
-        if (!meshValid)
+        if (!dataValid)
         {
-            meshValid = true;
-            GenerateMesh();
+            dataValid = true;
+            UpdateTextData();
         }
 
         CommandList commandList = args.CommandList;
@@ -134,10 +140,10 @@ public class TextEntity : Entity, IRenderable
         CameraData cameraData = args.CameraData;
         
         matrixStack.Push();
-        matrixStack.Scale(EmSize, EmSize, 1.0f);
+        matrixStack.Translate(0.0f, BaselineOffset / 64.0f, 0.0f);
 
-        Matrix4 transformation = matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection;
-        TextDrawData textDrawData = new TextDrawData(mesh.ReadOnly, transformation, Color, 4.0f * EmSize);
+        var transformation = matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection;
+        var textDrawData = new TextDrawData(mesh.ReadOnly, fontAtlas.ReadOnly, transformation, Color, 4.0f * EmSize);
         
         commandList.AddDrawData(layerType, textDrawData);
         matrixStack.Pop();

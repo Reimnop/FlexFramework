@@ -1,9 +1,12 @@
 ﻿using OpenTK.Mathematics;
 
-namespace FlexFramework.Core.Rendering;
+namespace FlexFramework.Core.Rendering.Lighting;
 
 public interface ILighting
 {
-    Vector3 AmbientLight { get; set; }
-    DirectionalLight? DirectionalLight { get; set; }
+    Vector3 GetAmbientLight();
+    DirectionalLight GetDirectionalLight();
+    
+    int GetPointLightsCount();
+    IEnumerable<PointLight> GetPointLights();
 }

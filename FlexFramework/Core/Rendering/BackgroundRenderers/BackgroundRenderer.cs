@@ -5,5 +5,5 @@ namespace FlexFramework.Core.Rendering.BackgroundRenderers;
 
 public abstract class BackgroundRenderer
 {
-    public abstract void Render(Renderer renderer, GLStateManager stateManager, Texture2D renderTarget, CameraData cameraData);
+    public abstract void Render(CommandList commandList, GLStateManager stateManager, IRenderBuffer renderBuffer, CameraData cameraData);
 }

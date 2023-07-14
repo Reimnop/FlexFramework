@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\FlexFramework.Text\FlexFramework.Text.csproj" />
+      <ProjectReference Include="..\MsdfGenNet\MsdfGenNet.csproj" />
+      <ProjectReference Include="..\SharpFont\SharpFont.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <None Update="Fonts\*.ttf">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>

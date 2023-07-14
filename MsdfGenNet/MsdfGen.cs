@@ -8,7 +8,7 @@ public static class MsdfGen
     {
         if (output.NumChannels != 1)
         {
-            throw new ArgumentException("Output image must have 1 channel!");
+            throw new ArgumentException("Output image must have 1 channel!", nameof(output));
         }
         
         BitmapRef bitmapRef = output.Reference;
@@ -27,7 +27,7 @@ public static class MsdfGen
     {
         if (output.NumChannels != 1)
         {
-            throw new ArgumentException("Output image must have 1 channel!");
+            throw new ArgumentException("Output image must have 1 channel!", nameof(output));
         }
         
         BitmapRef bitmapRef = output.Reference;
@@ -46,7 +46,7 @@ public static class MsdfGen
     {
         if (output.NumChannels != 3)
         {
-            throw new ArgumentException("Output image must have 3 channels!");
+            throw new ArgumentException("Output image must have 3 channels!", nameof(output));
         }
         
         BitmapRef bitmapRef = output.Reference;
@@ -65,7 +65,7 @@ public static class MsdfGen
     {
         if (output.NumChannels != 4)
         {
-            throw new ArgumentException("Output image must have 4 channels!");
+            throw new ArgumentException("Output image must have 4 channels!", nameof(output));
         }
         
         BitmapRef bitmapRef = output.Reference;

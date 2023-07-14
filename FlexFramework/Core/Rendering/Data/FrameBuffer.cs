@@ -26,6 +26,11 @@ public class FrameBuffer : IGpuObject, IDisposable
     {
         GL.NamedFramebufferTexture(Handle, attachment, texture2D.Handle, level);
     }
+    
+    public void DrawBuffers(params DrawBuffersEnum[] drawBuffers)
+    {
+        GL.NamedFramebufferDrawBuffers(Handle, drawBuffers.Length, drawBuffers);
+    }
 
     public void DrawBuffer(DrawBufferMode drawBufferMode)
     {

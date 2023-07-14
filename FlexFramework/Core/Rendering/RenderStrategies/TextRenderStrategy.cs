@@ -2,33 +2,33 @@
 using FlexFramework.Core.Rendering.Data;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using Sampler = FlexFramework.Core.Rendering.Data.Sampler;
 
 namespace FlexFramework.Core.Rendering.RenderStrategies;
 
 public class TextRenderStrategy : RenderStrategy, IDisposable
 {
-    private readonly FlexFrameworkMain engine;
-    private readonly TextAssets textAssets;
-    private readonly ShaderProgram textShader;
-    
+    private readonly ShaderProgram program;
+    private readonly Sampler sampler;
     private readonly MeshHandler meshHandler = new(
             (VertexAttributeIntent.Position, 0),
-            (VertexAttributeIntent.Color, 1),
-            (VertexAttributeIntent.TexCoord0, 2),
-            (VertexAttributeIntent.TexCoord1, 3)
-        );
+            (VertexAttributeIntent.TexCoord0, 1)
+    );
+    private readonly TextureHandler textureHandler = new();
     
-    public TextRenderStrategy(FlexFrameworkMain engine)
+    public TextRenderStrategy()
     {
-        this.engine = engine;
-        var textAssetLocation = engine.DefaultAssets.TextAssets;
-        textAssets = engine.ResourceRegistry.GetResource(textAssetLocation);
-
-        using var vertexShader = new Shader("text-vert", File.ReadAllText("Assets/Shaders/text.vert"), ShaderType.VertexShader);
-        using var fragmentShader = new Shader("text-frag", File.ReadAllText("Assets/Shaders/text.frag"), ShaderType.FragmentShader);
+        using var vertexShader = new Shader("text_vert", File.ReadAllText("Assets/Shaders/text.vert"), ShaderType.VertexShader);
+        using var fragmentShader = new Shader("text_frag", File.ReadAllText("Assets/Shaders/text.frag"), ShaderType.FragmentShader);
         
-        textShader = new ShaderProgram("text");
-        textShader.LinkShaders(vertexShader, fragmentShader);
+        program = new ShaderProgram("text");
+        program.LinkShaders(vertexShader, fragmentShader);
+        
+        sampler = new Sampler("text_sampler");
+        sampler.Parameter(SamplerParameterName.TextureMinFilter, (int) TextureMinFilter.Linear);
+        sampler.Parameter(SamplerParameterName.TextureMagFilter, (int) TextureMagFilter.Linear);
+        sampler.Parameter(SamplerParameterName.TextureWrapS, (int) TextureWrapMode.ClampToEdge);
+        sampler.Parameter(SamplerParameterName.TextureWrapT, (int) TextureWrapMode.ClampToEdge);
     }
 
     public override void Update(UpdateArgs args)
@@ -36,26 +36,22 @@ public class TextRenderStrategy : RenderStrategy, IDisposable
         meshHandler.Update(args.DeltaTime);
     }
 
-    public override void Draw(GLStateManager glStateManager, IDrawData drawData)
+    public override void Draw(GLStateManager glStateManager, CommandList commandList, IDrawData drawData)
     {
-        TextDrawData textDrawData = EnsureDrawDataType<TextDrawData>(drawData);
+        var textDrawData = EnsureDrawDataType<TextDrawData>(drawData);
         
         var mesh = meshHandler.GetMesh(textDrawData.Mesh);
+        var texture = textureHandler.GetTexture(textDrawData.FontAtlas);
         
-        glStateManager.UseProgram(textShader);
+        glStateManager.UseProgram(program);
         glStateManager.BindVertexArray(mesh.VertexArray);
+        glStateManager.BindTextureUnit(0, texture);
+        glStateManager.BindSampler(0, sampler);
 
         Matrix4 transformation = textDrawData.Transformation;
-        GL.UniformMatrix4(0, true, ref transformation);
-                
-        for (int i = 0; i < textAssets.AtlasTextures.Count; i++)
-        {
-            GL.Uniform1(i + 1, i);
-            glStateManager.BindTextureUnit(i, textAssets.AtlasTextures[i]);
-        }
-
-        GL.Uniform4(17, textDrawData.Color);
-        GL.Uniform1(18, textDrawData.DistanceRange);
+        GL.UniformMatrix4(program.GetUniformLocation("mvp"), true, ref transformation);
+        GL.Uniform4(program.GetUniformLocation("overlayColor"), textDrawData.Color);
+        GL.Uniform1(program.GetUniformLocation("distanceRange"), textDrawData.DistanceRange);
         
         if (textDrawData.Mesh.IndicesCount > 0)
             GL.DrawElements(PrimitiveType.Triangles, textDrawData.Mesh.IndicesCount, DrawElementsType.UnsignedInt, 0);
@@ -65,6 +61,9 @@ public class TextRenderStrategy : RenderStrategy, IDisposable
 
     public void Dispose()
     {
-        textShader.Dispose();
+        program.Dispose();
+        sampler.Dispose();
+        meshHandler.Dispose();
+        textureHandler.Dispose();
     }
 }

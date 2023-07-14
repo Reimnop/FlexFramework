@@ -1,6 +1,7 @@
 ﻿using FlexFramework.Modelling.Animation;
 using Assimp;
 using FlexFramework.Core.Data;
+using FlexFramework.Util;
 using OpenTK.Mathematics;
 using Quaternion = OpenTK.Mathematics.Quaternion;
 
@@ -14,15 +15,11 @@ public class ModelImporter : IDisposable
 
     private readonly AssimpContext context;
     private readonly Scene scene;
-    private readonly string directory;
 
-    public ModelImporter(string path)
+    public ModelImporter(Stream stream)
     {
-        path = Path.GetFullPath(path);
-        directory = Path.GetDirectoryName(path)!;
-        
         context = new AssimpContext();
-        scene = context.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.GenerateNormals | PostProcessSteps.FlipUVs | PostProcessSteps.EmbedTextures);
+        scene = context.ImportFileFromStream(stream, PostProcessSteps.Triangulate | PostProcessSteps.GenerateNormals | PostProcessSteps.FlipUVs | PostProcessSteps.EmbedTextures);
 
         // Collect all bones
         var boneNameToBone = new Dictionary<string, ModelBone>();
@@ -73,6 +70,8 @@ public class ModelImporter : IDisposable
     
     private Texture LoadTexture(EmbeddedTexture texture)
     {
+        var name = texture.Filename ?? "texture";
+
         // Check if texture is compressed
         if (texture.IsCompressed)
         {
@@ -82,7 +81,7 @@ public class ModelImporter : IDisposable
             var pixels = new byte[image.Width * image.Height * 4]; // 4 bytes per pixel
             image.CopyPixelDataTo(pixels);
                 
-            return new Texture(texture.Filename, image.Width, image.Height, PixelFormat.Rgba8, pixels);
+            return new Texture(name, image.Width, image.Height, PixelFormat.Rgba8, pixels);
         }
             
         // Not compressed, use raw data
@@ -98,28 +97,30 @@ public class ModelImporter : IDisposable
         }
             
         // Create texture
-        return new Texture(texture.Filename, texture.Width, texture.Height, PixelFormat.Rgba8, rawData);
+        return new Texture(name, texture.Width, texture.Height, PixelFormat.Rgba8, rawData);
     }
     
     public IEnumerable<ModelMaterial> LoadMaterials()
     {
         return scene.Materials.Select(material =>
         {
-            Texture? albedoTexture = null;
+            TextureSampler? albedoTexture = null;
             if (material.HasTextureDiffuse)
             {
                 var texture = material.TextureDiffuse;
                 if (Textures.TryGetValue(texture.FilePath, out var tex))
                 {
-                    albedoTexture = tex;
+                    var sampler = new Sampler(tex.Name);
+                    albedoTexture = new TextureSampler(tex, sampler);
                 }
             }
 
             var albedo = new Vector3(material.ColorDiffuse.R, material.ColorDiffuse.G, material.ColorDiffuse.B);
             var metallic = material.Reflectivity;
             var roughness = 1.0f - material.Shininess;
+            var emissive = new Vector3(material.ColorEmissive.R, material.ColorEmissive.G, material.ColorEmissive.B);
 
-            return new ModelMaterial(material.Name, albedo, metallic, roughness, albedoTexture, null, null);
+            return new ModelMaterial(material.Name, albedo, emissive, metallic, roughness, albedoTexture, null, null);
         });
     }
 
@@ -211,7 +212,7 @@ public class ModelImporter : IDisposable
         );
     }
 
-    public ImmutableNode<ModelNode> LoadModel()
+    public Node<ModelNode> LoadModel()
     {
         var rootNode = scene.RootNode;
         var modelTreeBuilder = GetModelTreeBuilder(rootNode);

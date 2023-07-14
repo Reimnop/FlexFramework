@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using OpenTK.Mathematics;
 
 namespace FlexFramework.Core.Data;
 
@@ -25,6 +26,7 @@ public class Texture : DataObject
 {
     private struct ReadOnlyTexture : ITextureView
     {
+        public string Name => texture.Name;
         public int Width => texture.Width;
         public int Height => texture.Height;
         public PixelFormat Format => texture.Format;
@@ -43,6 +45,8 @@ public class Texture : DataObject
     public PixelFormat Format { get; }
     public Buffer Data { get; }
     public ITextureView ReadOnly => new ReadOnlyTexture(this);
+    
+    private bool readOnly = false;
     
     public Texture(string name, int width, int height, PixelFormat format) : base(name)
     {
@@ -67,14 +71,26 @@ public class Texture : DataObject
         texture.SetData<Rgba32>(pixels);
         return texture;
     }
-
-    public void SetData<T>(ReadOnlySpan<T> data) where T : unmanaged
+    
+    public Texture SetReadOnly()
     {
+        readOnly = true;
+        Data.SetReadOnly();
+        return this;
+    }
+
+    public Texture SetData<T>(ReadOnlySpan<T> data) where T : unmanaged
+    {
+        if (readOnly)
+            throw new InvalidOperationException("Cannot modify read-only texture!");
+        
         var dataSize = data.Length * Unsafe.SizeOf<T>();
         var requiredSize = Width * Height * GetPixelSize(Format);
         if (dataSize != requiredSize)
             throw new ArgumentException($"Data size does not match texture size (expected {requiredSize}, got {dataSize})");
         Data.SetData(data);
+
+        return this;
     }
 
     public static int GetPixelSize(PixelFormat format)
@@ -96,7 +112,7 @@ public class Texture : DataObject
             PixelFormat.R16i => 2,
             PixelFormat.R32f => 4,
             PixelFormat.R32i => 4,
-            _ => throw new ArgumentException(nameof(format))
+            _ => throw new ArgumentException(null, nameof(format))
         };
     }
 }

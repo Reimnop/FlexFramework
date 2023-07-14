@@ -2,35 +2,78 @@
 using System.Runtime.InteropServices;
 using FlexFramework.Core.Audio;
 using FlexFramework.Core;
-using FlexFramework.Logging;
 using FlexFramework.Core.Rendering;
+using FlexFramework.Core.Rendering.Data;
 using FlexFramework.Util.Exceptions;
+using FlexFramework.Util.Logging;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace FlexFramework;
 
-public class FlexFrameworkMain : NativeWindow
+public delegate Renderer RendererFactory(FlexFrameworkMain engine);
+public delegate void LogCallbackDelegate(LogLevel level, string name, string message, Exception? exception);
+
+public delegate void UpdateEventHandler(UpdateArgs args);
+
+/// <summary>
+/// Main class for the FlexFramework
+/// </summary>
+public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 {
-    public SceneManager SceneManager { get; }
-    public ResourceRegistry ResourceRegistry { get; }
-    public EngineAssets DefaultAssets { get; }
-    public AudioManager AudioManager { get; }
+    private class FlexFrameworkLogger : ILogger
+    {
+        private readonly FlexFrameworkMain engine;
+        private readonly string name;
+        
+        public FlexFrameworkLogger(FlexFrameworkMain engine, string name)
+        {
+            this.engine = engine;
+            this.name = name;
+        }
+        
+        public void Log(LogLevel level, string message, Exception? exception = null)
+        {
+            engine.logCallback?.Invoke(level, name, message, exception);
+        }
+    }
+    
+    /// <summary>
+    /// Input manager for the engine
+    /// </summary>
     public Input Input { get; }
-    public Renderer Renderer { get; private set; } = null!;
+    
+    /// <summary>
+    /// Current renderer for rendering objects
+    /// </summary>
+    public Renderer Renderer { get; }
+    
+    public event UpdateEventHandler? UpdateEvent;
+    
+    private readonly SceneManager sceneManager;
+    private readonly AudioManager audioManager;
+    
+    private readonly ILogger logger;
+    private readonly LogCallbackDelegate? logCallback;
+    
+    private readonly FrameBuffer readFrameBuffer;
 
-    public event LogEventHandler? Log;
-
-    private float time = 0.0f;
+    private float time;
 
 #if DEBUG
     // This causes memory leaks, but the method needs to be pinned to prevent garbage collection
     private GCHandle leakedGcHandle;
 #endif
 
-    public FlexFrameworkMain(NativeWindowSettings nws) : base(nws)
+    public FlexFrameworkMain(
+        NativeWindowSettings nws, 
+        RendererFactory rendererFactory, 
+        LogCallbackDelegate? logCallback = null) : base(nws)
     {
+        this.logCallback = logCallback;
+        logger = this.CreateLogger<FlexFrameworkMain>();
+        
 #if DEBUG
         // init GL debug callback
         GL.Enable(EnableCap.DebugOutput);
@@ -41,78 +84,43 @@ public class FlexFrameworkMain : NativeWindow
         GL.DebugMessageCallback(debugProc, IntPtr.Zero);
 #endif
 
-        SceneManager = new SceneManager(this);
-        ResourceRegistry = new ResourceRegistry();
-        DefaultAssets = new EngineAssets(this, ResourceRegistry);
-        AudioManager = new AudioManager();
+        sceneManager = new SceneManager(this);
+        audioManager = new AudioManager();
         Input = new Input(this);
-    }
 
-    internal void LogMessage(object? sender, Severity severity, string? type, string message)
-    {
-        if (sender == null)
-        {
-            sender = this;
-        }
+        Renderer = rendererFactory(this);
+        logger.LogInfo($"Initialized renderer [{Renderer.GetType().Name}]");
         
-        Log?.Invoke(sender, new LogEventArgs(severity, type, message));
+        // Initialize framebuffer
+        readFrameBuffer = new FrameBuffer("read");
+    }
+    
+    public ILogger GetLogger(string name)
+    {
+        return new FlexFrameworkLogger(this, name);
     }
 
 #if DEBUG
     private void LogGlMessage(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
     {
-        if (severity == DebugSeverity.DebugSeverityNotification)
+        var messageString = Marshal.PtrToStringAnsi(message, length);
+        var logLevel = severity switch
         {
-            return;
-        }
-        
-        string messageString = Marshal.PtrToStringAnsi(message, length);
-        
-        Severity severityEnum;
-        switch (severity)
-        {
-            case DebugSeverity.DebugSeverityHigh:
-                severityEnum = Severity.Error;
-                break;
-            case DebugSeverity.DebugSeverityMedium:
-                severityEnum = Severity.Warning;
-                break;
-            case DebugSeverity.DebugSeverityLow:
-                severityEnum = Severity.Info;
-                break;
-            default:
-                severityEnum = Severity.Debug;
-                break;
-        }
-        
-        LogMessage(null, severityEnum, "OpenGL", messageString);
-        
-        if (type == DebugType.DebugTypeError)
-        {
-            throw new Exception(messageString);
-        }
+            DebugSeverity.DontCare => LogLevel.Verbose,
+            DebugSeverity.DebugSeverityNotification => LogLevel.Debug,
+            DebugSeverity.DebugSeverityHigh => LogLevel.Error,
+            DebugSeverity.DebugSeverityMedium => LogLevel.Warning,
+            DebugSeverity.DebugSeverityLow => LogLevel.Info,
+            _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, null)
+        };
+
+        logger.Log(logLevel, messageString);
     }
 #endif
 
-    public Renderer UseRenderer(Renderer renderer)
+    public Scene LoadScene(Func<Scene> sceneFactory)
     {
-        LogMessage(null, Severity.Info, null, $"Using renderer [{renderer.GetType().Name}]");
-        
-        if (Renderer is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
-        
-        renderer.SetEngine(this);
-        renderer.Init();
-
-        Renderer = renderer;
-        return renderer;
-    }
-
-    public Scene LoadScene(Scene scene)
-    {
-        return SceneManager.LoadScene(scene);
+        return sceneManager.LoadScene(sceneFactory);
     }
 
     public void Update()
@@ -120,14 +128,9 @@ public class FlexFrameworkMain : NativeWindow
         ProcessInputEvents();
         ProcessWindowEvents(false);
 
-        float currentTime = (float) GLFW.GetTime();
-        float deltaTime = currentTime - time;
+        var currentTime = (float) GLFW.GetTime();
+        var deltaTime = currentTime - time;
         time = currentTime;
-
-        if (deltaTime > 1.0f)
-        {
-            LogMessage(null, Severity.Warning, null, $"Last frame took {deltaTime * 1000.0f:0.0}ms! Is the thread being blocked?");
-        }
 
         Tick(deltaTime);
         Render();
@@ -135,15 +138,14 @@ public class FlexFrameworkMain : NativeWindow
 
     private void Tick(float deltaTime)
     {
-        if (SceneManager.CurrentScene == null)
+        if (sceneManager.CurrentScene == null)
         {
             throw new NoSceneException();
         }
 
-        UpdateArgs args = new UpdateArgs(time, deltaTime);
-        
-        SceneManager.CurrentScene.Update(args);
-
+        var args = new UpdateArgs(time, deltaTime);
+        UpdateEvent?.Invoke(args);
+        sceneManager.CurrentScene.Update(args);
         Renderer.Update(args);
     }
 
@@ -154,12 +156,18 @@ public class FlexFrameworkMain : NativeWindow
             throw new NoRendererException();
         }
         
-        SceneManager.CurrentScene.Render(Renderer);
+        sceneManager.CurrentScene.Render(Renderer);
     }
 
     public unsafe void Present(IRenderBuffer buffer)
     {
-        buffer.BlitToBackBuffer(ClientSize);
+        readFrameBuffer.Texture(FramebufferAttachment.ColorAttachment0, buffer.Texture);
+        
+        GL.BlitNamedFramebuffer(readFrameBuffer.Handle, 0, 
+            0, 0, Size.X, Size.Y, 
+            0, 0, ClientSize.X, ClientSize.Y,
+            ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
+        
         GLFW.SwapBuffers(WindowPtr);
     }
 
@@ -182,8 +190,7 @@ public class FlexFrameworkMain : NativeWindow
     {
         base.Dispose(disposing);
         
-        AudioManager.Dispose();
-        ResourceRegistry.Dispose();
+        audioManager.Dispose();
         if (Renderer is IDisposable disposable)
         {
             disposable.Dispose();

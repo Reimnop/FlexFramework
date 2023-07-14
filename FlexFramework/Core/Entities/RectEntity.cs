@@ -1,30 +1,21 @@
-﻿using FlexFramework.Core.Data;
-using FlexFramework.Core.Rendering;
+﻿using System.Runtime.InteropServices;
+using FlexFramework.Core.Data;
 using FlexFramework.Core.Rendering.Data;
 using FlexFramework.Util;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using Buffer = FlexFramework.Core.Data.Buffer;
 
 namespace FlexFramework.Core.Entities;
 
 public class RectEntity : Entity, IRenderable
 {
-    public Vector2 Min
+    public Box2 Bounds
     {
-        get => min;
+        get => bounds;
         set
         {
-            min = value;
-            InvalidateMesh();
-        }
-    }
-    
-    public Vector2 Max
-    {
-        get => max;
-        set
-        {
-            max = value;
+            bounds = value;
             InvalidateMesh();
         }
     }
@@ -38,19 +29,27 @@ public class RectEntity : Entity, IRenderable
             InvalidateMesh();
         }
     }
+
+    public float BorderThickness
+    {
+        get => borderThickness;
+        set
+        {
+            borderThickness = value;
+            InvalidateMesh();
+        }
+    }
     
     public Color4 Color { get; set; } = Color4.White;
 
-    private Vector2 min;
-    private Vector2 max;
+    private Box2 bounds;
     private float radius;
-    
-    private Vector2 lastSize;
+    private float borderThickness = float.PositiveInfinity;
 
     private bool meshValid = false;
     
     private readonly Mesh<Vertex> mesh;
-    private readonly List<Vector2> vertexPositions = new List<Vector2>();
+    private readonly Buffer buffer = new();
 
     public RectEntity()
     {
@@ -64,42 +63,28 @@ public class RectEntity : Entity, IRenderable
 
     private void GenerateMesh()
     {
-        Vector2 size = max - min;
-        
+        var size = bounds.Size;
         if (size.X * size.Y == 0)
-        {
             return;
-        }
 
-        if (size == lastSize)
+        buffer.Clear();
+        MeshGenerator.GenerateRoundedRectangle(pos =>
         {
-            return;
-        }
-        
-        vertexPositions.Clear();
-        MeshGenerator.GenerateRoundedRectangle(vertexPositions, Vector2.Zero, size, Radius);
+            var u = (pos.X - bounds.Min.X) / size.X;
+            var v = (pos.Y - bounds.Min.Y) / size.Y;
+            var vertex = new Vertex(pos.X, pos.Y, 0.0f, u, v);
+            buffer.Append(vertex);
+        }, bounds, Radius, borderThickness, 4);
 
-        Span<Vertex> vertices = stackalloc Vertex[vertexPositions.Count];
-        for (int i = 0; i < vertexPositions.Count; i++)
-        {
-            Vector2 pos = vertexPositions[i];
-            Vector2 uv = new Vector2(pos.X / size.X, pos.Y / size.Y);
-            vertices[i] = new Vertex(new Vector3(pos), uv);
-        }
-
-        mesh.SetData(vertices, null);
-
-        lastSize = size;
+        var vertexSpan = MemoryMarshal.Cast<byte, Vertex>(buffer.Data);
+        mesh.SetData(vertexSpan, null);
     }
 
     public void Render(RenderArgs args)
     {
-        Vector2 size = max - min;
-        
+        var size = bounds.Size;
         if (size.X * size.Y == 0)
-        {
             return;
-        }
 
         if (!meshValid)
         {
@@ -107,15 +92,11 @@ public class RectEntity : Entity, IRenderable
             GenerateMesh();
         }
 
-        CommandList commandList = args.CommandList;
-        LayerType layerType = args.LayerType;
-        MatrixStack matrixStack = args.MatrixStack;
-        CameraData cameraData = args.CameraData;
-
-        matrixStack.Push();
-        matrixStack.Translate(Min.X, Min.Y, 0.0f);
-        VertexDrawData vertexDrawData = new VertexDrawData(mesh.ReadOnly, matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection, null, Color, PrimitiveType.Triangles);
+        var commandList = args.CommandList;
+        var layerType = args.LayerType;
+        var matrixStack = args.MatrixStack;
+        var cameraData = args.CameraData;
+        var vertexDrawData = new VertexDrawData(mesh.ReadOnly, matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection, null, Color, PrimitiveType.Triangles);
         commandList.AddDrawData(layerType, vertexDrawData);
-        matrixStack.Pop();
     }
 }

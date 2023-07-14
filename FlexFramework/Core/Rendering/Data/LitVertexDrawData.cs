@@ -8,23 +8,26 @@ public struct LitVertexDrawData : IDrawData
     public IMeshView Mesh { get; }
     public Matrix4 Transformation { get; }
     public CameraData Camera { get; }
-    public ITextureView? AlbedoTexture { get; }
-    public ITextureView? MetallicTexture { get; }
-    public ITextureView? RoughnessTexture { get; }
+    public TextureSamplerPair? Albedo { get; }
+    public TextureSamplerPair? Metallic { get; }
+    public TextureSamplerPair? Roughness { get; }
     public MaterialData Material { get; }
 
     public LitVertexDrawData(
         IMeshView mesh, 
-        Matrix4 transformation, CameraData camera, 
-        ITextureView? albedoTexture, ITextureView? metallicTexture, ITextureView? roughnessTexture, 
+        Matrix4 transformation, 
+        CameraData camera, 
+        TextureSamplerPair? albedo, 
+        TextureSamplerPair? metallic, 
+        TextureSamplerPair? roughness,
         MaterialData material)
     {
         Mesh = mesh;
         Transformation = transformation;
         Camera = camera;
-        AlbedoTexture = albedoTexture;
-        MetallicTexture = metallicTexture;
-        RoughnessTexture = roughnessTexture;
+        Albedo = albedo;
+        Metallic = metallic;
+        Roughness = roughness;
         Material = material;
     }
 }

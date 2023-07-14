@@ -1,0 +1,54 @@
+﻿#version 430
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+uniform sampler2D positionTexture;
+uniform sampler2D normalTexture;
+uniform sampler2D colorTexture;
+
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+
+const float kernelX[] = {
+    -1.0, 0.0, 1.0,
+    -2.0, 0.0, 2.0,
+    -1.0, 0.0, 1.0
+};
+
+const float kernelY[] = {
+    -1.0, -2.0, -1.0,
+     0.0,  0.0,  0.0,
+     1.0,  2.0,  1.0
+};
+
+vec3 sobel(sampler2D tex, vec2 center, vec2 pixelStep) {
+    const float stepx = pixelStep.x;
+    const float stepy = pixelStep.y;
+    
+    vec3 sum = vec3(0.0);
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            vec2 offset = vec2(i * stepx, j * stepy);
+            vec4 color = texture(tex, center + offset);
+            sum.r += color.r * kernelX[(i + 1) * 3 + (j + 1)];
+            sum.r += color.r * kernelY[(i + 1) * 3 + (j + 1)];
+            sum.g += color.g * kernelX[(i + 1) * 3 + (j + 1)];
+            sum.g += color.g * kernelY[(i + 1) * 3 + (j + 1)];
+            sum.b += color.b * kernelX[(i + 1) * 3 + (j + 1)];
+            sum.b += color.b * kernelY[(i + 1) * 3 + (j + 1)];
+        }
+    }
+    
+    return sum;
+}
+
+void main() {
+    ivec2 size = imageSize(outputImage);
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 pixelStep = 1.0 / vec2(size);
+    vec2 texCoord = pixelCoord / vec2(size) + pixelStep * 0.5;
+
+    vec3 positionSobel = sobel(positionTexture, texCoord, pixelStep);
+    vec3 normalSobel = sobel(normalTexture, texCoord, pixelStep);
+    float intensity = min(length(positionSobel), length(normalSobel));
+    float result = 1.0 - clamp(intensity, 0.0, 1.0);
+    imageStore(outputImage, pixelCoord, vec4(result * texture(colorTexture, texCoord).rgb, 1.0));
+}

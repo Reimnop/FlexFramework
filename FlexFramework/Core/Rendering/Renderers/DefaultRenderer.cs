@@ -1,53 +1,48 @@
-﻿using System.Diagnostics;
-using FlexFramework.Core.Rendering.BackgroundRenderers;
-using FlexFramework.Core.Rendering.Data;
+﻿using FlexFramework.Core.Rendering.Data;
 using FlexFramework.Core.Rendering.RenderStrategies;
 using FlexFramework.Core.Rendering.PostProcessing;
-using FlexFramework.Logging;
-using FlexFramework.Util;
+using FlexFramework.Util.Logging;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-
-using Color = System.Drawing.Color;
+using Half = OpenTK.Mathematics.Half;
 
 namespace FlexFramework.Core.Rendering.Renderers;
 
-public class DefaultRenderer : Renderer, ILighting, IDisposable
+public class DefaultRenderer : Renderer, IDisposable
 {
-    public Vector3 AmbientLight { get; set; } = Vector3.One * 0.4f;
-    public DirectionalLight? DirectionalLight { get; set; }
+    public override GpuInfo GpuInfo { get; }
 
-    public override GpuInfo GpuInfo => gpuInfo;
-    private GpuInfo gpuInfo = null!;
+    private readonly Dictionary<Type, RenderStrategy> renderStrategies = new();
+
+    private readonly GLStateManager stateManager;
     
-    private Dictionary<Type, RenderStrategy> renderStrategies = new Dictionary<Type, RenderStrategy>();
+    // Framebuffers for copying and blitting
+    private readonly FrameBuffer readFrameBuffer;
+    private readonly FrameBuffer drawFrameBuffer;
 
-    private GLStateManager stateManager;
-    private ShaderProgram skyboxShader;
+    private readonly ILogger logger;
 
-    private int opaqueLayerId;
-    private int alphaClipLayerId;
-    private int transparentLayerId;
-    private int guiLayerId;
-
-    public override void Init()
+    public DefaultRenderer(ILoggerFactory loggerFactory)
     {
+        logger = loggerFactory.CreateLogger<DefaultRenderer>();
         stateManager = new GLStateManager();
         
         // Set GpuInfo
-        string name = GL.GetString(StringName.Renderer);
-        string vendor = GL.GetString(StringName.Vendor);
-        string version = GL.GetString(StringName.Version);
-        gpuInfo = new GpuInfo(name, vendor, version);
+        var name = GL.GetString(StringName.Renderer);
+        var vendor = GL.GetString(StringName.Vendor);
+        var version = GL.GetString(StringName.Version);
+        GpuInfo = new GpuInfo(name, vendor, version);
         
-        // Init GL objects
-        skyboxShader = LoadComputeProgram("skybox", "Assets/Shaders/Compute/skybox");
+        // Create framebuffers
+        readFrameBuffer = new FrameBuffer("read");
+        drawFrameBuffer = new FrameBuffer("draw");
 
         // Register render strategies
+        RegisterRenderStrategy<RenderBufferDrawData>(new RenderBufferRenderStrategy());
         RegisterRenderStrategy<VertexDrawData>(new VertexRenderStrategy());
-        RegisterRenderStrategy<LitVertexDrawData>(new LitVertexRenderStrategy(this));
-        RegisterRenderStrategy<SkinnedVertexDrawData>(new SkinnedVertexRenderStrategy(this));
-        RegisterRenderStrategy<TextDrawData>(new TextRenderStrategy(Engine));
+        RegisterRenderStrategy<LitVertexDrawData>(new LitVertexRenderStrategy());
+        RegisterRenderStrategy<SkinnedVertexDrawData>(new SkinnedVertexRenderStrategy());
+        RegisterRenderStrategy<TextDrawData>(new TextRenderStrategy());
 
         // Set GL modes
         GL.CullFace(CullFaceMode.Back);
@@ -71,18 +66,8 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
 
     private void RegisterRenderStrategy<TDrawData>(RenderStrategy strategy) where TDrawData : IDrawData
     {
-        Engine.LogMessage(this, Severity.Info, null, $"Initializing render strategy [{strategy.GetType().Name}] for [{typeof(TDrawData).Name}]");
+        logger.LogInfo($"Initializing render strategy [{strategy.GetType().Name}] for [{typeof(TDrawData).Name}]");
         renderStrategies.Add(typeof(TDrawData), strategy);
-    }
-
-    private ShaderProgram LoadComputeProgram(string name, string path)
-    {
-        using Shader shader = new Shader($"{name}-vs", File.ReadAllText($"{path}.comp"), ShaderType.ComputeShader);
-
-        ShaderProgram program = new ShaderProgram(name);
-        program.LinkShaders(shader);
-
-        return program;
     }
 
     public override void Render(Vector2i size, CommandList commandList, IRenderBuffer renderBuffer)
@@ -93,21 +78,21 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
             renderBuffer.Resize(size);
         }
         
-        DefaultRenderBuffer drb = (DefaultRenderBuffer) renderBuffer;
+        var drb = (DefaultRenderBuffer) renderBuffer;
 
-        stateManager.BindFramebuffer(drb.WorldCapturer.FrameBuffer); // Bind world framebuffer
+        // Bind world framebuffer
+        stateManager.BindFramebuffer(drb.WorldFrameBuffer);
 
-        GL.Viewport(0, 0, drb.WorldCapturer.Width, drb.WorldCapturer.Height);
-        
-        GL.ClearColor(ClearColor);
+        GL.Viewport(0, 0, drb.Size.X, drb.Size.Y);
+
+        // Clear screen
+        GL.ClearColor(commandList.GetClearColor());
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        
+
         // Render background
         if (commandList.TryGetBackgroundRenderer(out var backgroundRenderer, out var backgroundCameraData))
-        {
-            backgroundRenderer.Render(this, stateManager, drb.WorldCapturer.ColorBuffer, backgroundCameraData);
-        }
-        
+            backgroundRenderer.Render(commandList, stateManager, drb, backgroundCameraData);
+
         // Opaque
         if (commandList.TryGetLayer(LayerType.Opaque, out var opaqueLayer))
         {
@@ -116,7 +101,7 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
             stateManager.SetCapability(EnableCap.CullFace, true);
             stateManager.SetCapability(EnableCap.Blend, false);
             stateManager.SetDepthMask(true);
-            RenderLayer(opaqueLayer);
+            RenderLayer(commandList, opaqueLayer);
         }
 
         // Alpha clip
@@ -127,7 +112,7 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
             stateManager.SetCapability(EnableCap.CullFace, false);
             stateManager.SetCapability(EnableCap.Blend, false);
             stateManager.SetDepthMask(true);
-            RenderLayer(alphaClipLayer);
+            RenderLayer(commandList, alphaClipLayer);
         }
 
         // Transparent
@@ -138,28 +123,28 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
             stateManager.SetCapability(EnableCap.CullFace, false);
             stateManager.SetCapability(EnableCap.Blend, true);
             stateManager.SetDepthMask(false);
-            RenderLayer(transparentLayer);
+            RenderLayer(commandList, transparentLayer);
         }
         
         // Unbind
         stateManager.BindFramebuffer(null);
+        
+        // Copy world color to world final
+        GL.CopyImageSubData(
+            drb.WorldColor.Handle, ImageTarget.Texture2D, 0, 0, 0, 0,
+            drb.WorldFinal.Handle, ImageTarget.Texture2D, 0, 0, 0, 0,
+            drb.Size.X, drb.Size.Y, 1);
 
         // Post-process world framebuffer
         if (commandList.TryGetPostProcessors(out var postProcessors))
         {
-            RunPostProcessors(postProcessors, drb.WorldCapturer.ColorBuffer);
+            RunPostProcessors(postProcessors, drb, drb.WorldFinal);
         }
-
-        stateManager.BindFramebuffer(drb.GuiCapturer.FrameBuffer); // Finish rendering world, bind gui framebuffer
         
-        // Blit world framebuffer to gui framebuffer
-        GL.ClearColor(Color.Black);
-        GL.Clear(ClearBufferMask.ColorBufferBit);
-        GL.BlitNamedFramebuffer(
-            drb.WorldCapturer.FrameBuffer.Handle, drb.GuiCapturer.FrameBuffer.Handle, 
-            0, 0, drb.Size.X, drb.Size.Y, 
-            0, 0, drb.Size.X, drb.Size.Y, 
-            ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
+        // Copy world final to gui color
+        CopyImageFbo(drb.WorldFinal, drb.GuiColor, drb.Size);
+
+        stateManager.BindFramebuffer(drb.GuiFrameBuffer); // Bind gui framebuffer
 
         // GUI
         if (commandList.TryGetLayer(LayerType.Gui, out var guiLayer))
@@ -169,14 +154,17 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
             stateManager.SetCapability(EnableCap.CullFace, false);
             stateManager.SetCapability(EnableCap.Blend, true);
             stateManager.SetDepthMask(true);
-            RenderLayer(guiLayer);
+            RenderLayer(commandList, guiLayer);
         }
+        
+        // Finally, copy gui color to final texture
+        CopyImageFbo(drb.GuiColor, drb.GuiFinal, drb.Size);
         
         // Unbind
         stateManager.BindFramebuffer(null);
     }
 
-    private void RunPostProcessors(IReadOnlyList<PostProcessor> postProcessors, Texture2D texture)
+    private void RunPostProcessors(IReadOnlyList<PostProcessor> postProcessors, IRenderBuffer renderBuffer, Texture2D texture)
     {
         Vector2i size = new Vector2i(texture.Width, texture.Height);
         
@@ -184,40 +172,55 @@ public class DefaultRenderer : Renderer, ILighting, IDisposable
         {
             if (processor.CurrentSize == Vector2i.Zero)
             {
-                Engine.LogMessage(this, Severity.Info, null, $"Initializing post processor [{processor.GetType().Name}] with size {size}");
+                logger.LogInfo($"Initializing post processor [{processor.GetType().Name}] with size {size}");
                 processor.Init(size);
                 return;
             }
             
             if (processor.CurrentSize != size)
             {
-                Engine.LogMessage(this, Severity.Info, null, $"Resizing post processor [{processor.GetType().Name}] from {processor.CurrentSize} to {size}");
+                logger.LogInfo($"Resizing post processor [{processor.GetType().Name}] from {processor.CurrentSize} to {size}");
                 processor.Resize(size);
             }
         }
 
         foreach (var processor in postProcessors)
         {
-            processor.Process(stateManager, texture);
+            processor.Process(stateManager, renderBuffer, texture);
         }
     }
 
-    private void RenderLayer(IReadOnlyList<IDrawData> layer)
+    private void RenderLayer(CommandList commandList, IReadOnlyList<IDrawData> layer)
     {
         foreach (var drawData in layer)
         {
-            RenderStrategy strategy = renderStrategies[drawData.GetType()];
-            strategy.Draw(stateManager, drawData);
+            var strategy = renderStrategies[drawData.GetType()];
+            strategy.Draw(stateManager, commandList, drawData);
         }
+    }
+    
+    private void CopyImageFbo(Texture2D source, Texture2D destination, Vector2i size)
+    {
+        // Bind source and destination
+        readFrameBuffer.Texture(FramebufferAttachment.ColorAttachment0, source);
+        drawFrameBuffer.Texture(FramebufferAttachment.ColorAttachment0, destination);
+        
+        // Copy image
+        GL.BlitNamedFramebuffer(
+            readFrameBuffer.Handle, drawFrameBuffer.Handle, 
+            0, 0, size.X, size.Y, 
+            0, 0, size.X, size.Y, 
+            ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
     }
 
     public void Dispose()
     {
-        skyboxShader.Dispose();
-
         foreach (IDisposable strategy in renderStrategies.Values.OfType<IDisposable>())
         {
             strategy.Dispose();
         }
+        
+        readFrameBuffer.Dispose();
+        drawFrameBuffer.Dispose();
     }
 }

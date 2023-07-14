@@ -1,4 +1,5 @@
-﻿using OpenTK.Windowing.GraphicsLibraryFramework;
+﻿using OpenTK.Mathematics;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace FlexFramework.Core.UserInterface;
 
@@ -11,7 +12,7 @@ public class Interactivity : IUpdateable // In case you want to cast it to IUpda
     public event MouseEventHandler? MouseButtonDown;
     public event MouseEventHandler? MouseButtonUp;
     
-    public Bounds Bounds { get; set; }
+    public Box2 Bounds { get; set; }
     public bool MouseOver { get; private set; }
     public bool[] MouseButtons { get; } = new bool[(int) MouseButton.Last + 1];
     
@@ -63,7 +64,7 @@ public class Interactivity : IUpdateable // In case you want to cast it to IUpda
     
     private bool IsMouseOver()
     {
-        return inputProvider.InputAvailable && Bounds.Contains(inputProvider.MousePosition);
+        return inputProvider.InputAvailable && Bounds.ContainsInclusive(inputProvider.MousePosition);
     }
     
     private bool IsMouseButton(MouseButton button)

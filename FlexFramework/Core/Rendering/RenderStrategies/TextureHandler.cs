@@ -7,7 +7,7 @@ using Timer = FlexFramework.Util.Timer;
 
 namespace FlexFramework.Core.Rendering.RenderStrategies;
 
-public class TextureHandler
+public class TextureHandler : IDisposable
 {
     private readonly GarbageCollector<ITextureView, Texture2D> gc;
     private readonly Timer timer;
@@ -35,10 +35,9 @@ public class TextureHandler
     
     private static Texture2D CreateTexture(ITextureView texture)
     {
-        SizedInternalFormat internalFormat = ConvertToSizedInternalFormat(texture.Format);
-        Texture2D tex = new("texture", texture.Width, texture.Height, internalFormat);
+        var internalFormat = ConvertToSizedInternalFormat(texture.Format);
+        var tex = new Texture2D(texture.Name, texture.Width, texture.Height, internalFormat);
         tex.SetData(texture.Data.Data, ConvertToPixelFormat(texture.Format), ConvertToPixelType(texture.Format));
-        
         return tex;
     }
     
@@ -61,7 +60,7 @@ public class TextureHandler
             PixelFormat.R16i => SizedInternalFormat.R16i,
             PixelFormat.R32f => SizedInternalFormat.R32f,
             PixelFormat.R32i => SizedInternalFormat.R32i,
-            _ => throw new ArgumentException(nameof(format))
+            _ => throw new ArgumentException(null, nameof(format))
         };
     }
     
@@ -84,7 +83,7 @@ public class TextureHandler
             PixelFormat.R16i => OpenTK.Graphics.OpenGL4.PixelFormat.Red,
             PixelFormat.R32f => OpenTK.Graphics.OpenGL4.PixelFormat.Red,
             PixelFormat.R32i => OpenTK.Graphics.OpenGL4.PixelFormat.Red,
-            _ => throw new ArgumentException(nameof(format))
+            _ => throw new ArgumentException(null, nameof(format))
         };
     }
     
@@ -107,7 +106,12 @@ public class TextureHandler
             PixelFormat.R16i => PixelType.Int,
             PixelFormat.R32f => PixelType.Float,
             PixelFormat.R32i => PixelType.Int,
-            _ => throw new ArgumentException(nameof(format))
+            _ => throw new ArgumentException(null, nameof(format))
         };
+    }
+
+    public void Dispose()
+    {
+        gc.Dispose();
     }
 }

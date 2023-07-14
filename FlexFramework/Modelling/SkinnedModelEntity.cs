@@ -3,6 +3,7 @@ using FlexFramework.Core.Data;
 using FlexFramework.Core.Entities;
 using FlexFramework.Core.Rendering;
 using FlexFramework.Core.Rendering.Data;
+using FlexFramework.Util;
 using OpenTK.Mathematics;
 
 namespace FlexFramework.Modelling;
@@ -10,7 +11,7 @@ namespace FlexFramework.Modelling;
 // TODO: Implement support for non-zero mesh origins
 // Alright, I can't fix this
 // Please don't use non-zero mesh origins
-public class SkinnedModelEntity : Entity, IRenderable
+public class SkinnedModelEntity : Entity, IUpdateable, IRenderable
 {
     public AnimationHandler AnimationHandler { get; }
 
@@ -30,17 +31,15 @@ public class SkinnedModelEntity : Entity, IRenderable
         AnimationHandler = new AnimationHandler(model);
     }
 
-    public override void Update(UpdateArgs args)
+    public void Update(UpdateArgs args)
     {
-        base.Update(args);
-        
         time += args.DeltaTime;
         AnimationHandler.Update(time);
         
         CalculateBoneMatricesRecursively(model.RootNode, boneMatrixStack);
     }
     
-    private void CalculateBoneMatricesRecursively(ImmutableNode<ModelNode> node, MatrixStack matrixStack)
+    private void CalculateBoneMatricesRecursively(Node<ModelNode> node, MatrixStack matrixStack)
     {
         var modelNode = node.Value;
         
@@ -66,7 +65,7 @@ public class SkinnedModelEntity : Entity, IRenderable
     }
     
     // more recursion bullshit
-    private void RenderModelRecursively(ImmutableNode<ModelNode> node, RenderArgs args)
+    private void RenderModelRecursively(Node<ModelNode> node, RenderArgs args)
     {
         var matrixStack = args.MatrixStack;
         var modelNode = node.Value;
@@ -85,6 +84,7 @@ public class SkinnedModelEntity : Entity, IRenderable
                 UseMetallicTexture = material.MetallicTexture != null,
                 UseRoughnessTexture = material.RoughnessTexture != null,
                 Albedo = material.Albedo,
+                Emissive = material.Emissive,
                 Metallic = material.Metallic,
                 Roughness = material.Roughness
             };
@@ -94,13 +94,27 @@ public class SkinnedModelEntity : Entity, IRenderable
                 matrixStack.GlobalTransformation, 
                 cameraData, 
                 boneMatrices,
-                material.AlbedoTexture?.ReadOnly, material.MetallicTexture?.ReadOnly, material.RoughnessTexture?.ReadOnly,
+                material.AlbedoTexture != null 
+                    ? new TextureSamplerPair(
+                        material.AlbedoTexture.Texture.ReadOnly, 
+                        material.AlbedoTexture.Sampler.ReadOnly) 
+                    : null,
+                material.MetallicTexture != null 
+                    ? new TextureSamplerPair(
+                        material.MetallicTexture.Texture.ReadOnly, 
+                        material.MetallicTexture.Sampler.ReadOnly) 
+                    : null,
+                material.RoughnessTexture != null
+                    ? new TextureSamplerPair(
+                        material.RoughnessTexture.Texture.ReadOnly, 
+                        material.RoughnessTexture.Sampler.ReadOnly) 
+                    : null,
                 materialData);
         
             commandList.AddDrawData(layerType, vertexDrawData);
         }
 
-        foreach (ImmutableNode<ModelNode> child in node.Children)
+        foreach (Node<ModelNode> child in node.Children)
         {
             RenderModelRecursively(child, args);
         }

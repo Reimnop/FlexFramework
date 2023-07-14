@@ -1,22 +1,6 @@
-﻿using System.Collections;
-using FlexFramework.Core;
+﻿namespace FlexFramework.Core.Entities;
 
-namespace FlexFramework.Core.Entities;
-
-public abstract class Entity : IUpdateable
+// TODO: Consider making this an interface instead of an abstract class.
+public abstract class Entity
 {
-    private bool started = false;
-
-    public virtual void Start()
-    {
-    }
-
-    public virtual void Update(UpdateArgs args)
-    {
-        if (!started)
-        {
-            started = true;
-            Start();
-        }
-    }
 }

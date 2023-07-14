@@ -102,7 +102,7 @@ public class AudioSource : IDisposable
                 }
             }
             
-            Thread.Sleep(2);
+            Thread.Sleep(10);
         }
     }
 

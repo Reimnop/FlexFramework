@@ -5,31 +5,29 @@ namespace FlexFramework.Core.UserInterface.Elements;
 
 public class RectElement : VisualElement, IRenderable
 {
-    public float Radius
-    {
-        get => rectEntity.Radius;
-        set => rectEntity.Radius = value;
-    }
-
     public Color4 Color
     {
         get => rectEntity.Color;
         set => rectEntity.Color = value;
     }
-
-    private readonly RectEntity rectEntity = new RectEntity();
-
-    public RectElement(params Element[] children) : base(children)
+    
+    public float Radius
     {
+        get => rectEntity.Radius;
+        set => rectEntity.Radius = value;
+    }
+    
+    public float BorderThickness
+    {
+        get => rectEntity.BorderThickness;
+        set => rectEntity.BorderThickness = value;
     }
 
-    public override void UpdateLayout(Bounds constraintBounds)
+    private readonly RectEntity rectEntity = new();
+
+    protected override void UpdateLayout(Box2 bounds)
     {
-        base.UpdateLayout(constraintBounds);
-        UpdateChildrenLayout(ContentBounds);
-        
-        rectEntity.Min = ElementBounds.Min;
-        rectEntity.Max = ElementBounds.Max;
+        rectEntity.Bounds = bounds;
     }
 
     public override void Render(RenderArgs args)

@@ -24,9 +24,9 @@ public class VorbisAudioStream : AudioStream
     {
         vorbis = new VorbisReader(stream);
         
-        // buffer one/20 second of audio
-        readBuffer = new float[vorbis.Channels * vorbis.SampleRate / 20];
-        copyBuffer = new byte[vorbis.Channels * vorbis.SampleRate * sizeof(float) / 20];
+        // buffer one second of audio
+        readBuffer = new float[vorbis.Channels * vorbis.SampleRate];
+        copyBuffer = new byte[vorbis.Channels * vorbis.SampleRate * sizeof(float)];
     }
 
     public override void Seek(long position, SeekOrigin seekOrigin = SeekOrigin.Begin)

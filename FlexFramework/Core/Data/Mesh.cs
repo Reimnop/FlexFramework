@@ -47,6 +47,7 @@ public struct VertexAttribute
     }
 }
 
+[AttributeUsage(AttributeTargets.Field)]
 public class VertexAttributeAttribute : Attribute
 {
     public VertexAttributeIntent Intent { get; set; }
@@ -105,6 +106,7 @@ public class Mesh<T> : DataObject where T : unmanaged
 {
     private struct ReadOnlyMesh : IMeshView
     {
+        public string Name => mesh.Name;
         public IBufferView VertexBuffer => mesh.VertexBuffer.ReadOnly;
         public IBufferView? IndexBuffer => mesh.IndexBuffer?.ReadOnly;
         public int VerticesCount => mesh.VerticesCount;
@@ -132,6 +134,8 @@ public class Mesh<T> : DataObject where T : unmanaged
     private Buffer? indexBuffer = null;
     private int verticesCount = 0;
     private int indicesCount = 0;
+    
+    private bool readOnly = false;
 
     public Mesh(string name, VertexLayout? vertexLayout = null) : base(name)
     {
@@ -149,8 +153,11 @@ public class Mesh<T> : DataObject where T : unmanaged
         SetData(vertices, indices);
     }
 
-    public void SetData(ReadOnlySpan<T> vertices, ReadOnlySpan<int> indices)
+    public Mesh<T> SetData(ReadOnlySpan<T> vertices, ReadOnlySpan<int> indices)
     {
+        if (readOnly)
+            throw new InvalidOperationException("Cannot modify read-only mesh!");
+        
         vertexBuffer.SetData(vertices);
         verticesCount = vertices.Length;
         
@@ -164,8 +171,18 @@ public class Mesh<T> : DataObject where T : unmanaged
         {
             indexBuffer = null;
         }
+
+        return this;
     }
-    
+
+    public Mesh<T> SetReadOnly()
+    {
+        readOnly = true;
+        VertexBuffer.SetReadOnly();
+        IndexBuffer?.SetReadOnly();
+        return this;
+    }
+
     public T GetVertex(int index)
     {
         if (index < 0 || index >= verticesCount)

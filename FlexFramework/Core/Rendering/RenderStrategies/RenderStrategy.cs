@@ -4,7 +4,7 @@ namespace FlexFramework.Core.Rendering.RenderStrategies;
 
 public abstract class RenderStrategy
 {
-    protected T EnsureDrawDataType<T>(IDrawData drawData)
+    protected static T EnsureDrawDataType<T>(IDrawData drawData)
     {
         if (drawData is T castedDrawData)
         {
@@ -14,5 +14,5 @@ public abstract class RenderStrategy
     }
 
     public abstract void Update(UpdateArgs args);
-    public abstract void Draw(GLStateManager glStateManager, IDrawData drawData);
+    public abstract void Draw(GLStateManager glStateManager, CommandList commandList, IDrawData drawData);
 }

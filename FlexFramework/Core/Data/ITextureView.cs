@@ -1,6 +1,6 @@
 ﻿namespace FlexFramework.Core.Data;
 
-public interface ITextureView
+public interface ITextureView : INamedObjectView
 {
     int Width { get; }
     int Height { get; }
