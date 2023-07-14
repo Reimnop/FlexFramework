@@ -25,7 +25,7 @@ public class RectElement : VisualElement, IRenderable
 
     private readonly RectEntity rectEntity = new();
 
-    protected override void UpdateLayout(Box2 bounds)
+    protected override void UpdateLayout(Box2 bounds, float dpiScale)
     {
         rectEntity.Bounds = bounds;
     }

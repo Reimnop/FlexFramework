@@ -23,7 +23,7 @@ public class ImageElement : Element, IRenderable
         imageEntity = new ImageEntity(texture);
     }
     
-    protected override void UpdateLayout(Box2 bounds)
+    protected override void UpdateLayout(Box2 bounds, float dpiScale)
     {
         this.bounds = bounds;
     }

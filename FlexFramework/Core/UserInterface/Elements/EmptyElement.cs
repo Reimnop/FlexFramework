@@ -4,7 +4,7 @@ namespace FlexFramework.Core.UserInterface.Elements;
 
 public class EmptyElement : Element
 {
-    protected override void UpdateLayout(Box2 bounds)
+    protected override void UpdateLayout(Box2 bounds, float dpiScale)
     {
         // Do nothing
     }

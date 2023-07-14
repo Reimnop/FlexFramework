@@ -16,8 +16,6 @@ public class ViewportElement : VisualElement, IRenderable, IDisposable
     private readonly IRenderBuffer renderBuffer;
     private readonly RenderCallback renderCallback;
 
-    private Box2 bounds;
-
     public ViewportElement(Renderer renderer, RenderCallback renderCallback)
     {
         this.renderer = renderer;
@@ -25,14 +23,13 @@ public class ViewportElement : VisualElement, IRenderable, IDisposable
         renderBuffer = renderer.CreateRenderBuffer(Vector2i.One);
     }
     
-    protected override void UpdateLayout(Box2 bounds)
+    protected override void UpdateLayout(Box2 bounds, float dpiScale)
     {
-        this.bounds = bounds;
     }
 
     public override void Render(RenderArgs args)
     {
-        var viewportSize = (Vector2i) bounds.Size;
+        var viewportSize = (Vector2i) (Bounds.Size * DpiScale);
         
         commandList.Clear();
         renderCallback(viewportSize, commandList);
@@ -42,8 +39,8 @@ public class ViewportElement : VisualElement, IRenderable, IDisposable
         matrixStack.Push();
         matrixStack.Scale(1.0f, -1.0f, 0.0f);
         matrixStack.Translate(0.5f, 0.5f, 0.0f);
-        matrixStack.Scale(bounds.Size.X, bounds.Size.Y, 1.0f);
-        matrixStack.Translate(bounds.Min.X, bounds.Min.Y, 0.0f);
+        matrixStack.Scale(Bounds.Size.X, Bounds.Size.Y, 1.0f);
+        matrixStack.Translate(Bounds.Min.X, Bounds.Min.Y, 0.0f);
         
         var transformation = matrixStack.GlobalTransformation * args.CameraData.View * args.CameraData.Projection;
         var drawData = new RenderBufferDrawData(DefaultAssets.QuadMesh.ReadOnly, transformation, renderBuffer, PrimitiveType.Triangles);

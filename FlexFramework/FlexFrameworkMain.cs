@@ -48,7 +48,12 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
     /// Current renderer for rendering objects
     /// </summary>
     public Renderer Renderer { get; }
-    
+
+    /// <summary>
+    /// The DPI scale of the window
+    /// </summary>
+    public float DpiScale => TryGetCurrentMonitorScale(out _, out var dpiScale) ? dpiScale : 1.0f;
+
     public event UpdateEventHandler? UpdateEvent;
     
     private readonly SceneManager sceneManager;

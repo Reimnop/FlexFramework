@@ -43,9 +43,10 @@ public class TextElement : VisualElement, IRenderable
         textEntity = new TextEntity(font);
     }
 
-    protected override void UpdateLayout(Box2 bounds)
+    protected override void UpdateLayout(Box2 bounds, float dpiScale)
     {
         textEntity.Bounds = bounds;
+        textEntity.DpiScale = dpiScale;
     }
 
     public override void Render(RenderArgs args)

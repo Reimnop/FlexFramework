@@ -73,6 +73,8 @@ public class TextEntity : Entity, IRenderable
         }
     }
 
+    public float DpiScale { get; set; } = 1.0f;
+
     private HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left;
     private VerticalAlignment verticalAlignment = VerticalAlignment.Top;
     private Box2 bounds = new(0.0f, 0.0f, 0.0f, 0.0f);
@@ -143,7 +145,7 @@ public class TextEntity : Entity, IRenderable
         matrixStack.Translate(0.0f, BaselineOffset / 64.0f, 0.0f);
 
         var transformation = matrixStack.GlobalTransformation * cameraData.View * cameraData.Projection;
-        var textDrawData = new TextDrawData(mesh.ReadOnly, fontAtlas.ReadOnly, transformation, Color, 4.0f * EmSize);
+        var textDrawData = new TextDrawData(mesh.ReadOnly, fontAtlas.ReadOnly, transformation, Color, 4.0f * EmSize * DpiScale);
         
         commandList.AddDrawData(layerType, textDrawData);
         matrixStack.Pop();

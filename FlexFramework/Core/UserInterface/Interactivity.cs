@@ -13,6 +13,7 @@ public class Interactivity : IUpdateable // In case you want to cast it to IUpda
     public event MouseEventHandler? MouseButtonUp;
     
     public Box2 Bounds { get; set; }
+    public float DpiScale { get; set; }
     public bool MouseOver { get; private set; }
     public bool[] MouseButtons { get; } = new bool[(int) MouseButton.Last + 1];
     
@@ -64,7 +65,7 @@ public class Interactivity : IUpdateable // In case you want to cast it to IUpda
     
     private bool IsMouseOver()
     {
-        return inputProvider.InputAvailable && Bounds.ContainsInclusive(inputProvider.MousePosition);
+        return inputProvider.InputAvailable && Bounds.ContainsInclusive(inputProvider.MousePosition / DpiScale);
     }
     
     private bool IsMouseButton(MouseButton button)
