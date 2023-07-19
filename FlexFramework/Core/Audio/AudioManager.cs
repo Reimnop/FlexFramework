@@ -1,23 +1,23 @@
-﻿using OpenTK.Audio.OpenAL;
+﻿using FlexFramework.Util.Logging;
+using ManagedBass;
 
 namespace FlexFramework.Core.Audio;
 
 public class AudioManager : IDisposable
 {
-    private readonly ALDevice device;
-    private readonly ALContext context;
+    private readonly ILogger logger;
     
-    public AudioManager()
+    public AudioManager(ILoggerFactory loggerFactory)
     {
-        string deviceName = ALC.GetString(ALDevice.Null, AlcGetString.DefaultDeviceSpecifier);
-        device = ALC.OpenDevice(deviceName);
-        context = ALC.CreateContext(device, (int[]) null);
-        ALC.MakeContextCurrent(context);
+        logger = loggerFactory.CreateLogger<AudioManager>();
+
+        Bass.Init();
+        
+        logger.LogInfo("Initialized audio module");
     }
     
     public void Dispose()
     {
-        ALC.DestroyContext(context);
-        ALC.CloseDevice(device);
+        Bass.Free();
     }
 }

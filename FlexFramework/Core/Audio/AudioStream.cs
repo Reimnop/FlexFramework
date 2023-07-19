@@ -1,16 +1,48 @@
-﻿namespace FlexFramework.Core.Audio;
+﻿using ManagedBass;
 
-public abstract class AudioStream : IDisposable
+namespace FlexFramework.Core.Audio;
+
+public class AudioStream
 {
-    public abstract float Length { get; }
-    public abstract int Channels { get; }
-    public abstract int BytesPerSample { get; }
-    public abstract int SampleRate { get; }
-    public abstract long SampleCount { get; }
-    public abstract long SamplePosition { get; }
+    public bool Playing => Bass.ChannelIsActive(Handle) == PlaybackState.Playing;
+    public float Position
+    {
+        get => (float) Bass.ChannelBytes2Seconds(Handle, Bass.ChannelGetPosition(Handle));
+        set => Bass.ChannelSetPosition(Handle, Bass.ChannelSeconds2Bytes(Handle, value));
+    }
+    
+    internal int Handle { get; }
+    internal AudioSource Source { get; }
 
-    public abstract void Seek(long position, SeekOrigin seekOrigin = SeekOrigin.Begin);
-    public abstract bool ShouldQueueBuffers();
-    public abstract bool NextBuffer(out Span<byte> data);
-    public abstract void Dispose();
+    internal AudioStream(AudioSource source, int handle)
+    {
+        Source = source;
+        Handle = handle;
+    }
+    
+    public void Play(bool restart = false)
+    {
+        Bass.ChannelPlay(Handle, restart);
+    }
+    
+    public void Pause()
+    {
+        Bass.ChannelPause(Handle);
+    }
+    
+    public void Stop()
+    {
+        Bass.ChannelStop(Handle);
+    }
+
+    public void Dispose()
+    {
+        Bass.StreamFree(Handle);
+        Source.Remove(this);
+    }
+    
+    internal void DisposeDontRemove()
+    {
+        Bass.StreamFree(Handle);
+    }
 }

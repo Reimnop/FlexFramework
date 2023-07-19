@@ -90,7 +90,7 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 #endif
 
         sceneManager = new SceneManager(this);
-        audioManager = new AudioManager();
+        audioManager = new AudioManager(this);
         Input = new Input(this);
 
         Renderer = rendererFactory(this);

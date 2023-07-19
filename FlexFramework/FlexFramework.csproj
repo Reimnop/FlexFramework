@@ -21,9 +21,8 @@
     <ItemGroup>
         <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
         <PackageReference Include="HalfMaid.Async" Version="0.9.2" />
+        <PackageReference Include="ManagedBass" Version="3.1.1" />
         <PackageReference Include="NVorbis" Version="0.10.4" />
-        <PackageReference Include="OpenAL.Soft" Version="1.19.1" />
-        <PackageReference Include="OpenTK.Audio.OpenAL" Version="4.8.0" />
         <PackageReference Include="OpenTK.Core" Version="4.8.0" />
         <PackageReference Include="OpenTK.Graphics" Version="4.8.0" />
         <PackageReference Include="OpenTK.Input" Version="4.8.0" />
