@@ -23,7 +23,14 @@
         <PackageReference Include="HalfMaid.Async" Version="0.9.2" />
         <PackageReference Include="NVorbis" Version="0.10.4" />
         <PackageReference Include="OpenAL.Soft" Version="1.19.1" />
-        <PackageReference Include="OpenTK" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Audio.OpenAL" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Core" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Graphics" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Input" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Mathematics" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Windowing.Common" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Windowing.Desktop" Version="4.8.0" />
+        <PackageReference Include="OpenTK.Windowing.GraphicsLibraryFramework" Version="4.8.0" />
         <PackageReference Include="Poly2Tri" Version="1.0.1" />
         <PackageReference Include="SharpEXR" Version="1.0.0.19" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
