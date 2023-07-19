@@ -24,7 +24,7 @@ public class AudioSource : IDisposable
             AL.Source(Handle, ALSourcef.Pitch, pitch);
         }
     }
-    public bool Playing => AL.GetSourceState(Handle) == ALSourceState.Playing;
+    public bool Playing => AL.GetSource(Handle, ALGetSourcei.SourceState) == (int) ALSourceState.Playing;
     public bool Looping { get; set; } = true;
 
     public Vector3 Position

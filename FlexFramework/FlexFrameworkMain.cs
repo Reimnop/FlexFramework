@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using FlexFramework.Core.Audio;
 using FlexFramework.Core;
@@ -14,7 +15,6 @@ namespace FlexFramework;
 
 public delegate Renderer RendererFactory(FlexFrameworkMain engine);
 public delegate void LogCallbackDelegate(LogLevel level, string name, string message, Exception? exception);
-
 public delegate void UpdateEventHandler(UpdateArgs args);
 
 /// <summary>
@@ -130,7 +130,7 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     public void Update()
     {
-        ProcessInputEvents();
+        NewInputFrame();
         ProcessWindowEvents(false);
 
         var currentTime = (float) GLFW.GetTime();
@@ -166,10 +166,12 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     public unsafe void Present(IRenderBuffer buffer)
     {
+        Debug.Assert(buffer.Size == ClientSize);
+        
         readFrameBuffer.Texture(FramebufferAttachment.ColorAttachment0, buffer.Texture);
         
         GL.BlitNamedFramebuffer(readFrameBuffer.Handle, 0, 
-            0, 0, Size.X, Size.Y, 
+            0, 0, buffer.Size.X, buffer.Size.Y, 
             0, 0, ClientSize.X, ClientSize.Y,
             ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
         
@@ -183,8 +185,6 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        base.OnClosing(e);
-
 #if DEBUG
         // Unleak the debug callback
         leakedGcHandle.Free();
@@ -193,12 +193,8 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
-        
         audioManager.Dispose();
         if (Renderer is IDisposable disposable)
-        {
             disposable.Dispose();
-        }
     }
 }
