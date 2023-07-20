@@ -41,6 +41,9 @@
         <Content Include="Assets/**/*.*">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
+        <None Include="runtimes/**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
