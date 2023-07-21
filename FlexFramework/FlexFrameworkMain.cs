@@ -185,6 +185,8 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        base.OnClosing(e);
+        
 #if DEBUG
         // Unleak the debug callback
         leakedGcHandle.Free();
@@ -193,6 +195,8 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
+        
         audioManager.Dispose();
         if (Renderer is IDisposable disposable)
             disposable.Dispose();
