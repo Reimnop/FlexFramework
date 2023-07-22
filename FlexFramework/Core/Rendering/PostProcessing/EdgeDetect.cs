@@ -1,4 +1,5 @@
-﻿using FlexFramework.Core.Rendering.Data;
+﻿using System.Diagnostics;
+using FlexFramework.Core.Rendering.Data;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -7,7 +8,7 @@ namespace FlexFramework.Core.Rendering.PostProcessing;
 public class EdgeDetect : PostProcessor
 {
     private ShaderProgram program;
-    private Texture2D outputTexture;
+    private Texture2D? outputTexture;
 
     public EdgeDetect()
     {
@@ -16,28 +17,24 @@ public class EdgeDetect : PostProcessor
         program.LinkShaders(shader);
     }
     
-    public override void Resize(Vector2i size)
-    {
-        base.Resize(size);
-        
-        outputTexture.Dispose();
-        outputTexture = new Texture2D("sobel", size.X, size.Y, SizedInternalFormat.Rgba16f);
-    }
-
     public override void Init(Vector2i size)
     {
         base.Init(size);
 
+        outputTexture?.Dispose();
         outputTexture = new Texture2D("sobel", size.X, size.Y, SizedInternalFormat.Rgba16f);
     }
     
     // We don't need the render buffer here
     public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
+        if (!Initialized)
+            throw new InvalidOperationException($"{nameof(EdgeDetect)} was not initialized!");
+        
         if (renderBuffer is not IGBuffer gBuffer)
-        {
-            return;
-        }
+            throw new InvalidOperationException($"{nameof(EdgeDetect)} requires a {nameof(IGBuffer)}!");
+        
+        Debug.Assert(outputTexture != null);
         
         stateManager.UseProgram(program);
         GL.Uniform1(program.GetUniformLocation("positionTexture"), 0);
@@ -59,7 +56,7 @@ public class EdgeDetect : PostProcessor
 
     public void Dispose()
     {
-        outputTexture.Dispose();
+        outputTexture?.Dispose();
         program.Dispose();
     }
     

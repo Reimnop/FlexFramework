@@ -166,22 +166,21 @@ public class DefaultRenderer : Renderer, IDisposable
 
     private void RunPostProcessors(IReadOnlyList<PostProcessor> postProcessors, IRenderBuffer renderBuffer, Texture2D texture)
     {
-        Vector2i size = new Vector2i(texture.Width, texture.Height);
+        var size = new Vector2i(texture.Width, texture.Height);
         
         foreach (var processor in postProcessors)
         {
-            if (processor.CurrentSize == Vector2i.Zero)
+            if (!processor.Initialized)
             {
                 logger.LogInfo($"Initializing post processor [{processor.GetType().Name}] with size {size}");
                 processor.Init(size);
-                return;
             }
+
+            if (processor.CurrentSize == size)
+                continue;
             
-            if (processor.CurrentSize != size)
-            {
-                logger.LogInfo($"Resizing post processor [{processor.GetType().Name}] from {processor.CurrentSize} to {size}");
-                processor.Resize(size);
-            }
+            logger.LogInfo($"Resizing post processor [{processor.GetType().Name}] from {processor.CurrentSize} to {size}");
+            processor.Init(size);
         }
 
         foreach (var processor in postProcessors)

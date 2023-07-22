@@ -1,4 +1,5 @@
-﻿using FlexFramework.Core.Rendering.Data;
+﻿using System.Diagnostics;
+using FlexFramework.Core.Rendering.Data;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -18,11 +19,11 @@ public class Bloom : PostProcessor, IDisposable
     private readonly ShaderProgram combineShader;
     private readonly Sampler sampler;
 
-    private Texture2D[] downsampleMipChain;
-    private Texture2D[] upsampleMipChain;
-    private Texture2D prefilteredTexture;
-    private Texture2D smallestTexture;
-    private Texture2D finalTexture;
+    private Texture2D[]? downsampleMipChain;
+    private Texture2D[]? upsampleMipChain;
+    private Texture2D? prefilteredTexture;
+    private Texture2D? smallestTexture;
+    private Texture2D? finalTexture;
 
     public Bloom()
     {
@@ -38,22 +39,11 @@ public class Bloom : PostProcessor, IDisposable
         sampler.Parameter(SamplerParameterName.TextureWrapT, (int) TextureWrapMode.ClampToEdge);
     }
     
-    public override void Resize(Vector2i size)
-    {
-        base.Resize(size);
-        
-        DeleteTextures();
-        InitSize(size);
-    }
-
     public override void Init(Vector2i size)
     {
         base.Init(size);
-        InitSize(size);
-    }
-
-    private void InitSize(Vector2i size)
-    {
+        
+        DeleteTextures();
         prefilteredTexture = new Texture2D("bloom_prefiltered", size.X, size.Y, SizedInternalFormat.Rgba16f);
         downsampleMipChain = InitMipChain(size / 2, 0.5f, 5);
         smallestTexture = new Texture2D("bloom_smallest", downsampleMipChain[^1].Width / 2, downsampleMipChain[^1].Height / 2, SizedInternalFormat.Rgba16f);
@@ -86,6 +76,15 @@ public class Bloom : PostProcessor, IDisposable
 
     public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
+        if (!Initialized)
+            throw new InvalidOperationException($"{nameof(Bloom)} was not initialized!");
+        
+        Debug.Assert(downsampleMipChain != null);
+        Debug.Assert(upsampleMipChain != null);
+        Debug.Assert(prefilteredTexture != null);
+        Debug.Assert(smallestTexture != null);
+        Debug.Assert(finalTexture != null);
+        
         stateManager.BindSampler(0, sampler);
         
         // Prefiltering
@@ -165,17 +164,18 @@ public class Bloom : PostProcessor, IDisposable
 
     private void DeleteTextures()
     {
-        foreach (var texture in downsampleMipChain)
-            texture.Dispose();
+        if (downsampleMipChain != null)
+            foreach (var texture in downsampleMipChain)
+                texture.Dispose();
+        if (upsampleMipChain != null)
+            foreach (var texture in upsampleMipChain)
+                texture.Dispose();
         
-        foreach (var texture in upsampleMipChain)
-            texture.Dispose();
-        
-        prefilteredTexture.Dispose();
-        smallestTexture.Dispose();
-        finalTexture.Dispose();
+        prefilteredTexture?.Dispose();
+        smallestTexture?.Dispose();
+        finalTexture?.Dispose();
     }
-    
+
     private static int DivideIntCeil(int a, int b)
     {
         return a / b + (a % b > 0 ? 1 : 0);

@@ -15,13 +15,9 @@ public abstract class PostProcessor
     public Vector2i CurrentSize { get; private set; }
 
     /// <summary>
-    /// Resize the internal render buffers
+    /// Whether the internal render buffers have been initialized
     /// </summary>
-    /// <param name="size">New size of the internal buffers</param>
-    public virtual void Resize(Vector2i size)
-    {
-        CurrentSize = size;
-    }
+    public bool Initialized { get; private set; } 
     
     /// <summary>
     /// Initialize the internal render buffers
@@ -30,10 +26,10 @@ public abstract class PostProcessor
     /// <param name="size">Initial size of the internal buffers</param>
     public virtual void Init(Vector2i size)
     {
+        Initialized = true;
         CurrentSize = size;
     }
-    
-    
+
     /// <summary>
     /// Run the post processor
     /// </summary>

@@ -1,4 +1,5 @@
-﻿using FlexFramework.Core.Rendering.Data;
+﻿using System.Diagnostics;
+using FlexFramework.Core.Rendering.Data;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -7,7 +8,7 @@ namespace FlexFramework.Core.Rendering.PostProcessing;
 public class Fxaa : PostProcessor, IDisposable
 {
     private ShaderProgram program;
-    private Texture2D antialiasedTexture;
+    private Texture2D? antialiasedTexture;
 
     public Fxaa()
     {
@@ -16,24 +17,22 @@ public class Fxaa : PostProcessor, IDisposable
         program = new ShaderProgram("fxaa");
         program.LinkShaders(shader);
     }
-    
-    public override void Resize(Vector2i size)
-    {
-        base.Resize(size);
-        
-        antialiasedTexture.Dispose();
-        antialiasedTexture = new Texture2D("fxaa", size.X, size.Y, SizedInternalFormat.Rgba16f);
-    }
 
     public override void Init(Vector2i size)
     {
         base.Init(size);
 
+        antialiasedTexture?.Dispose();
         antialiasedTexture = new Texture2D("fxaa", size.X, size.Y, SizedInternalFormat.Rgba16f);
     }
     
     public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
+        if (!Initialized)
+            throw new InvalidOperationException($"{nameof(Fxaa)} was not initialized!");
+        
+        Debug.Assert(antialiasedTexture != null);
+        
         stateManager.UseProgram(program);
         stateManager.BindTextureUnit(0, texture);
         GL.BindImageTexture(0, antialiasedTexture.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
@@ -48,7 +47,7 @@ public class Fxaa : PostProcessor, IDisposable
 
     public void Dispose()
     {
-        antialiasedTexture.Dispose();
+        antialiasedTexture?.Dispose();
         program.Dispose();
     }
     

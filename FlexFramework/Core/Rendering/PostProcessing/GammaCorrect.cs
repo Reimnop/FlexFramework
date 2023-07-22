@@ -1,4 +1,5 @@
-﻿using FlexFramework.Core.Rendering.Data;
+﻿using System.Diagnostics;
+using FlexFramework.Core.Rendering.Data;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -9,7 +10,7 @@ public class GammaCorrect : PostProcessor, IDisposable
     public float Gamma { get; set; } = 2.2f;
 
     private ShaderProgram program;
-    private Texture2D tonemappedTexture;
+    private Texture2D? tonemappedTexture;
 
     public GammaCorrect()
     {
@@ -18,24 +19,22 @@ public class GammaCorrect : PostProcessor, IDisposable
         program = new ShaderProgram("reinhard");
         program.LinkShaders(shader);
     }
-    
-    public override void Resize(Vector2i size)
-    {
-        base.Resize(size);
-        
-        tonemappedTexture.Dispose();
-        tonemappedTexture = new Texture2D("gamma-correct", size.X, size.Y, SizedInternalFormat.Rgba16f);
-    }
 
     public override void Init(Vector2i size)
     {
         base.Init(size);
 
+        tonemappedTexture?.Dispose();
         tonemappedTexture = new Texture2D("gamma-correct", size.X, size.Y, SizedInternalFormat.Rgba16f);
     }
     
     public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
+        if (!Initialized)
+            throw new InvalidOperationException($"{nameof(GammaCorrect)} was not initialized!");
+        
+        Debug.Assert(tonemappedTexture != null);
+        
         stateManager.UseProgram(program);
         stateManager.BindTextureUnit(0, texture);
         GL.Uniform1(program.GetUniformLocation("gamma"), Gamma);
@@ -51,7 +50,7 @@ public class GammaCorrect : PostProcessor, IDisposable
 
     public void Dispose()
     {
-        tonemappedTexture.Dispose();
+        tonemappedTexture?.Dispose();
         program.Dispose();
     }
     

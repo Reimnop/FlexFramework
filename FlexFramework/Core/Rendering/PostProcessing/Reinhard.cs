@@ -1,4 +1,5 @@
-﻿using FlexFramework.Core.Rendering.Data;
+﻿using System.Diagnostics;
+using FlexFramework.Core.Rendering.Data;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -7,7 +8,7 @@ namespace FlexFramework.Core.Rendering.PostProcessing;
 public class Reinhard : PostProcessor, IDisposable
 {
     private ShaderProgram program;
-    private Texture2D tonemappedTexture;
+    private Texture2D? tonemappedTexture;
 
     public Reinhard()
     {
@@ -16,25 +17,23 @@ public class Reinhard : PostProcessor, IDisposable
         program = new ShaderProgram("reinhard");
         program.LinkShaders(shader);
     }
-    
-    public override void Resize(Vector2i size)
-    {
-        base.Resize(size);
-        
-        tonemappedTexture.Dispose();
-        tonemappedTexture = new Texture2D("reinhard", size.X, size.Y, SizedInternalFormat.Rgba16f);
-    }
 
     public override void Init(Vector2i size)
     {
         base.Init(size);
 
+        tonemappedTexture?.Dispose();
         tonemappedTexture = new Texture2D("reinhard", size.X, size.Y, SizedInternalFormat.Rgba16f);
     }
     
     // We don't need the render buffer here
     public override void Process(GLStateManager stateManager, IRenderBuffer renderBuffer, Texture2D texture)
     {
+        if (!Initialized)
+            throw new InvalidOperationException($"{nameof(Reinhard)} was not initialized!");
+        
+        Debug.Assert(tonemappedTexture != null);
+        
         stateManager.UseProgram(program);
         stateManager.BindTextureUnit(0, texture);
         GL.BindImageTexture(0, tonemappedTexture.Handle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba16f);
@@ -49,7 +48,7 @@ public class Reinhard : PostProcessor, IDisposable
 
     public void Dispose()
     {
-        tonemappedTexture.Dispose();
+        tonemappedTexture?.Dispose();
         program.Dispose();
     }
     
