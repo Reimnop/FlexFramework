@@ -160,12 +160,13 @@ public class FlexFrameworkApplication : NativeWindow, ILoggerFactory
 
     public unsafe void Present(IRenderBuffer buffer)
     {
-        Debug.Assert(buffer.Size == ClientSize);
+        if (buffer.Size != ClientSize)
+            logger.LogWarning($"Presenting buffer with size [{buffer.Size}] to window with size [{ClientSize}]");
         
         readFrameBuffer.Texture(FramebufferAttachment.ColorAttachment0, buffer.Texture);
         
         GL.BlitNamedFramebuffer(readFrameBuffer.Handle, 0, 
-            0, 0, buffer.Size.X, buffer.Size.Y, 
+            0, 0, ClientSize.X, ClientSize.Y, 
             0, 0, ClientSize.X, ClientSize.Y,
             ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
         
