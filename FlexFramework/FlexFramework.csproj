@@ -10,9 +10,6 @@
 
     <PropertyGroup>
         <DefineConstants>$(DefineConstants)</DefineConstants>
-
-        <!-- Show UI bounding boxes -->
-        <!-- <DefineConstants>DEBUG_SHOW_BOUNDING_BOXES</DefineConstants> -->
         
         <!-- Print unhandled logs for debugging -->
         <!-- <DefineConstants>PRINT_UNROUTED_LOGS</DefineConstants> -->
@@ -22,7 +19,6 @@
         <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
         <PackageReference Include="HalfMaid.Async" Version="0.9.2" />
         <PackageReference Include="ManagedBass" Version="3.1.1" />
-        <PackageReference Include="NVorbis" Version="0.10.4" />
         <PackageReference Include="OpenTK.Core" Version="4.8.0" />
         <PackageReference Include="OpenTK.Graphics" Version="4.8.0" />
         <PackageReference Include="OpenTK.Input" Version="4.8.0" />
@@ -33,14 +29,13 @@
         <PackageReference Include="Poly2Tri" Version="1.0.1" />
         <PackageReference Include="SharpEXR" Version="1.0.0.19" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
-        <PackageReference Include="System.IO.Hashing" Version="7.0.0" />
         <PackageReference Include="TextCopy" Version="6.2.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <Content Include="Assets/**/*.*">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
+        <None Include="Assets/**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Include="runtimes/**">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
