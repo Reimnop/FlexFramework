@@ -150,23 +150,30 @@ public class Bloom : PostProcessor, IDisposable
 
     public void Dispose()
     {
+        DeleteShaders();
+        DeleteTextures();
+    }
+
+    private void DeleteShaders()
+    {
         prefilterShader.Dispose();
         downsampleShader.Dispose();
         upsampleShader.Dispose();
         combineShader.Dispose();
         sampler.Dispose();
-        DeleteTextures();
     }
 
     private void DeleteTextures()
     {
-        List<Texture2D> textures = new List<Texture2D>();
-        textures.AddRange(downsampleMipChain);
-        textures.AddRange(upsampleMipChain);
-        textures.Add(prefilteredTexture);
-        textures.Add(smallestTexture);
-        textures.Add(finalTexture);
-        textures.ForEach(x => x.Dispose());
+        foreach (var texture in downsampleMipChain)
+            texture.Dispose();
+        
+        foreach (var texture in upsampleMipChain)
+            texture.Dispose();
+        
+        prefilteredTexture.Dispose();
+        smallestTexture.Dispose();
+        finalTexture.Dispose();
     }
     
     private static int DivideIntCeil(int a, int b)

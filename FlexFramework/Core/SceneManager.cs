@@ -1,10 +1,12 @@
-﻿using FlexFramework.Util.Logging;
+﻿using FlexFramework.Core.Rendering;
+using FlexFramework.Util.Logging;
 
 namespace FlexFramework.Core;
 
-public class SceneManager
+public class SceneManager : IUpdateable
 {
-    public Scene CurrentScene { get; private set; } = null!;
+    public Scene? CurrentScene { get; private set; }
+    private Func<Scene>? currentSceneFactory;
 
     private readonly ILogger logger;
     
@@ -12,17 +14,30 @@ public class SceneManager
     {
         logger = loggerFactory.CreateLogger<SceneManager>();
     }
-
-    public Scene LoadScene(Func<Scene> sceneFactory)
+    
+    public void Update(UpdateArgs args)
     {
-        var scene = sceneFactory();
-        
-        logger.LogInfo($"Loading scene [{scene.GetType().Name}]");
-        if (CurrentScene is IDisposable disposable)
+        if (currentSceneFactory != null)
         {
-            disposable.Dispose();
+            var scene = currentSceneFactory();
+            logger.LogInfo($"Loading scene [{scene.GetType().Name}]");
+            if (CurrentScene is IDisposable disposable)
+                disposable.Dispose();
+            CurrentScene = scene;
+            currentSceneFactory = null;
         }
-        CurrentScene = scene;
-        return scene;
+
+        CurrentScene?.Update(args);
+    }
+    
+    public void Render(Renderer renderer)
+    {
+        CurrentScene?.Render(renderer);
+    }
+
+    public void LoadScene(Func<Scene> sceneFactory)
+    {
+        // Defer loading the scene until the next update
+        currentSceneFactory = sceneFactory;
     }
 }

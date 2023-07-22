@@ -2,7 +2,7 @@
 
 public class NoRendererException : Exception
 {
-    public NoRendererException() : base("No renderer was loaded")
+    public NoRendererException() : base("No renderer was loaded!")
     {
     }
 }

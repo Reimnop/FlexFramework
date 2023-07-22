@@ -13,21 +13,21 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace FlexFramework;
 
-public delegate Renderer RendererFactory(FlexFrameworkMain engine);
+public delegate Renderer RendererFactory(FlexFrameworkApplication engine);
 public delegate void LogCallbackDelegate(LogLevel level, string name, string message, Exception? exception);
 public delegate void UpdateEventHandler(UpdateArgs args);
 
 /// <summary>
 /// Main class for the FlexFramework
 /// </summary>
-public class FlexFrameworkMain : NativeWindow, ILoggerFactory
+public class FlexFrameworkApplication : NativeWindow, ILoggerFactory
 {
     private class FlexFrameworkLogger : ILogger
     {
-        private readonly FlexFrameworkMain engine;
+        private readonly FlexFrameworkApplication engine;
         private readonly string name;
         
-        public FlexFrameworkLogger(FlexFrameworkMain engine, string name)
+        public FlexFrameworkLogger(FlexFrameworkApplication engine, string name)
         {
             this.engine = engine;
             this.name = name;
@@ -48,6 +48,11 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
     /// Current renderer for rendering objects
     /// </summary>
     public Renderer Renderer { get; }
+    
+    /// <summary>
+    /// Current scene manager for managing scenes
+    /// </summary>
+    public SceneManager SceneManager { get; }
 
     /// <summary>
     /// The DPI scale of the window
@@ -56,7 +61,6 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     public event UpdateEventHandler? UpdateEvent;
     
-    private readonly SceneManager sceneManager;
     private readonly AudioManager audioManager;
     
     private readonly ILogger logger;
@@ -71,13 +75,13 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
     private GCHandle leakedGcHandle;
 #endif
 
-    public FlexFrameworkMain(
+    public FlexFrameworkApplication(
         NativeWindowSettings nws, 
         RendererFactory rendererFactory, 
         LogCallbackDelegate? logCallback = null) : base(nws)
     {
         this.logCallback = logCallback;
-        logger = this.CreateLogger<FlexFrameworkMain>();
+        logger = this.CreateLogger<FlexFrameworkApplication>();
         
 #if DEBUG
         // init GL debug callback
@@ -89,7 +93,7 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
         GL.DebugMessageCallback(debugProc, IntPtr.Zero);
 #endif
 
-        sceneManager = new SceneManager(this);
+        SceneManager = new SceneManager(this);
         audioManager = new AudioManager(this);
         Input = new Input(this);
 
@@ -123,11 +127,6 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
     }
 #endif
 
-    public Scene LoadScene(Func<Scene> sceneFactory)
-    {
-        return sceneManager.LoadScene(sceneFactory);
-    }
-
     public void Update()
     {
         NewInputFrame();
@@ -143,14 +142,9 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
 
     private void Tick(float deltaTime)
     {
-        if (sceneManager.CurrentScene == null)
-        {
-            throw new NoSceneException();
-        }
-
         var args = new UpdateArgs(time, deltaTime);
         UpdateEvent?.Invoke(args);
-        sceneManager.CurrentScene.Update(args);
+        SceneManager.Update(args);
         Renderer.Update(args);
     }
 
@@ -161,7 +155,7 @@ public class FlexFrameworkMain : NativeWindow, ILoggerFactory
             throw new NoRendererException();
         }
         
-        sceneManager.CurrentScene.Render(Renderer);
+        SceneManager.Render(Renderer);
     }
 
     public unsafe void Present(IRenderBuffer buffer)

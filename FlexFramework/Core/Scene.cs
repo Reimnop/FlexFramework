@@ -4,9 +4,9 @@ namespace FlexFramework.Core;
 
 public abstract class Scene
 {
-    protected FlexFrameworkMain Engine { get; }
+    protected FlexFrameworkApplication Engine { get; }
 
-    protected Scene(FlexFrameworkMain engine)
+    protected Scene(FlexFrameworkApplication engine)
     {
         Engine = engine;
     }
