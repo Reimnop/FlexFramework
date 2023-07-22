@@ -18,8 +18,8 @@ public class TextRenderStrategy : RenderStrategy, IDisposable
     
     public TextRenderStrategy()
     {
-        using var vertexShader = new Shader("text_vert", File.ReadAllText("Assets/Shaders/text.vert"), ShaderType.VertexShader);
-        using var fragmentShader = new Shader("text_frag", File.ReadAllText("Assets/Shaders/text.frag"), ShaderType.FragmentShader);
+        using var vertexShader = new Shader("text_vert", File.ReadAllText("Assets/Shaders/Vertex/text.vert"), ShaderType.VertexShader);
+        using var fragmentShader = new Shader("text_frag", File.ReadAllText("Assets/Shaders/Fragment/text.frag"), ShaderType.FragmentShader);
         
         program = new ShaderProgram("text");
         program.LinkShaders(vertexShader, fragmentShader);

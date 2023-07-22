@@ -26,8 +26,8 @@ public class SkinnedVertexRenderStrategy : RenderStrategy, IDisposable
     public SkinnedVertexRenderStrategy()
     {
         // Shader init
-        using var vertexShader = new Shader("skinned_vs", File.ReadAllText("Assets/Shaders/skinned.vert"), ShaderType.VertexShader);
-        using var fragmentShader = new Shader("skinned_fs", File.ReadAllText("Assets/Shaders/lit.frag"), ShaderType.FragmentShader);
+        using var vertexShader = new Shader("skinned_vs", File.ReadAllText("Assets/Shaders/Vertex/skinned.vert"), ShaderType.VertexShader);
+        using var fragmentShader = new Shader("skinned_fs", File.ReadAllText("Assets/Shaders/Fragment/lit.frag"), ShaderType.FragmentShader);
 
         program = new ShaderProgram("skinned");
         program.LinkShaders(vertexShader, fragmentShader);

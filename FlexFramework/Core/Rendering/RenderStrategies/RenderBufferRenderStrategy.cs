@@ -19,8 +19,8 @@ public class RenderBufferRenderStrategy : RenderStrategy, IDisposable
 
     public RenderBufferRenderStrategy()
     {
-        using var vertexShader = new Shader("unlit_vert", File.ReadAllText("Assets/Shaders/unlit.vert"), ShaderType.VertexShader);
-        using var fragmentShader = new Shader("unlit_frag", File.ReadAllText("Assets/Shaders/unlit.frag"), ShaderType.FragmentShader);
+        using var vertexShader = new Shader("unlit_vert", File.ReadAllText("Assets/Shaders/Vertex/unlit.vert"), ShaderType.VertexShader);
+        using var fragmentShader = new Shader("unlit_frag", File.ReadAllText("Assets/Shaders/Fragment/unlit.frag"), ShaderType.FragmentShader);
         
         program = new ShaderProgram("unlit");
         program.LinkShaders(vertexShader, fragmentShader);

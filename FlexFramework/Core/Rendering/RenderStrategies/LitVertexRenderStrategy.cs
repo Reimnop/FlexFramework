@@ -24,8 +24,8 @@ public class LitVertexRenderStrategy : RenderStrategy, IDisposable
     public LitVertexRenderStrategy()
     {
         // Shader init
-        using var vertexShader = new Shader("lit_vert", File.ReadAllText("Assets/Shaders/lit.vert"), ShaderType.VertexShader);
-        using var fragmentShader = new Shader("lit_frag", File.ReadAllText("Assets/Shaders/lit.frag"), ShaderType.FragmentShader);
+        using var vertexShader = new Shader("lit_vert", File.ReadAllText("Assets/Shaders/Vertex/lit.vert"), ShaderType.VertexShader);
+        using var fragmentShader = new Shader("lit_frag", File.ReadAllText("Assets/Shaders/Fragment/lit.frag"), ShaderType.FragmentShader);
         
         program = new ShaderProgram("lit");
         program.LinkShaders(vertexShader, fragmentShader);
