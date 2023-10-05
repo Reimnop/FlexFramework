@@ -34,10 +34,25 @@
 
     <ItemGroup>
         <None Include="Assets/**">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Include="runtimes/**">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        
+        <!-- If target runtime is Linux, copy linux-x64 to root -->
+        <None Include="runtimes/linux-x64/native/**" Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <TargetPath>%(Filename)%(Extension)</TargetPath>
+        </None>
+        
+        <!-- If target runtime is OSX, copy osx to root -->
+        <None Include="runtimes/osx/native/**" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <TargetPath>%(Filename)%(Extension)</TargetPath>
+        </None>
+
+        <!-- If target runtime is Windows, copy win-x64 to root -->
+        <None Include="runtimes/win-x64/native/**" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <TargetPath>%(Filename)%(Extension)</TargetPath>
         </None>
     </ItemGroup>
 
